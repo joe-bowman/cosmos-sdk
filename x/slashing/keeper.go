@@ -14,7 +14,7 @@ type Keeper struct {
 	storeKey     sdk.StoreKey
 	cdc          *wire.Codec
 	validatorSet sdk.ValidatorSet
-	params       params.Getter
+	params       Params
 
 	// codespace
 	codespace sdk.CodespaceType
@@ -26,7 +26,7 @@ func NewKeeper(cdc *wire.Codec, key sdk.StoreKey, vs sdk.ValidatorSet, params pa
 		storeKey:     key,
 		cdc:          cdc,
 		validatorSet: vs,
-		params:       params,
+		params:       Params{Params: params},
 		codespace:    codespace,
 	}
 	return keeper
@@ -40,7 +40,7 @@ func (k Keeper) handleDoubleSign(ctx sdk.Context, pubkey crypto.PubKey, infracti
 	address := sdk.ValAddress(pubkey.Address())
 
 	// Double sign too old
-	maxEvidenceAge := k.MaxEvidenceAge(ctx)
+	maxEvidenceAge := k.params.MaxEvidenceAge(ctx)
 	if age > maxEvidenceAge {
 		logger.Info(fmt.Sprintf("Ignored double sign from %s at height %d, age of %d past max age of %d", pubkey.Address(), infractionHeight, age, maxEvidenceAge))
 		return
@@ -50,7 +50,7 @@ func (k Keeper) handleDoubleSign(ctx sdk.Context, pubkey crypto.PubKey, infracti
 	logger.Info(fmt.Sprintf("Confirmed double sign from %s at height %d, age of %d less than max age of %d", pubkey.Address(), infractionHeight, age, maxEvidenceAge))
 
 	// Slash validator
-	k.validatorSet.Slash(ctx, pubkey, infractionHeight, power, k.SlashFractionDoubleSign(ctx))
+	k.validatorSet.Slash(ctx, pubkey, infractionHeight, power, k.params.SlashFractionDoubleSign(ctx))
 
 	// Revoke validator
 	k.validatorSet.Revoke(ctx, pubkey)
@@ -60,7 +60,7 @@ func (k Keeper) handleDoubleSign(ctx sdk.Context, pubkey crypto.PubKey, infracti
 	if !found {
 		panic(fmt.Sprintf("Expected signing info for validator %s but not found", address))
 	}
-	signInfo.JailedUntil = time + k.DoubleSignUnbondDuration(ctx)
+	signInfo.JailedUntil = time + k.params.DoubleSignUnbondDuration(ctx)
 	k.setValidatorSigningInfo(ctx, address, signInfo)
 }
 
@@ -77,7 +77,7 @@ func (k Keeper) handleValidatorSignature(ctx sdk.Context, pubkey crypto.PubKey, 
 		// If this validator has never been seen before, construct a new SigningInfo with the correct start height
 		signInfo = NewValidatorSigningInfo(height, 0, 0, 0)
 	}
-	index := signInfo.IndexOffset % k.SignedBlocksWindow(ctx)
+	index := signInfo.IndexOffset % k.params.SignedBlocksWindow(ctx)
 	signInfo.IndexOffset++
 
 	// Update signed block bit array & counter
@@ -97,15 +97,15 @@ func (k Keeper) handleValidatorSignature(ctx sdk.Context, pubkey crypto.PubKey, 
 	}
 
 	if !signed {
-		logger.Info(fmt.Sprintf("Absent validator %s at height %d, %d signed, threshold %d", pubkey.Address(), height, signInfo.SignedBlocksCounter, k.MinSignedPerWindow(ctx)))
+		logger.Info(fmt.Sprintf("Absent validator %s at height %d, %d signed, threshold %d", pubkey.Address(), height, signInfo.SignedBlocksCounter, k.params.MinSignedPerWindow(ctx)))
 	}
-	minHeight := signInfo.StartHeight + k.SignedBlocksWindow(ctx)
-	if height > minHeight && signInfo.SignedBlocksCounter < k.MinSignedPerWindow(ctx) {
+	minHeight := signInfo.StartHeight + k.params.SignedBlocksWindow(ctx)
+	if height > minHeight && signInfo.SignedBlocksCounter < k.params.MinSignedPerWindow(ctx) {
 		// Downtime confirmed, slash, revoke, and jail the validator
-		logger.Info(fmt.Sprintf("Validator %s past min height of %d and below signed blocks threshold of %d", pubkey.Address(), minHeight, k.MinSignedPerWindow(ctx)))
-		k.validatorSet.Slash(ctx, pubkey, height, power, k.SlashFractionDowntime(ctx))
+		logger.Info(fmt.Sprintf("Validator %s past min height of %d and below signed blocks threshold of %d", pubkey.Address(), minHeight, k.params.MinSignedPerWindow(ctx)))
+		k.validatorSet.Slash(ctx, pubkey, height, power, k.params.SlashFractionDowntime(ctx))
 		k.validatorSet.Revoke(ctx, pubkey)
-		signInfo.JailedUntil = ctx.BlockHeader().Time + k.DowntimeUnbondDuration(ctx)
+		signInfo.JailedUntil = ctx.BlockHeader().Time + k.params.DowntimeUnbondDuration(ctx)
 	}
 
 	// Set the updated signing info

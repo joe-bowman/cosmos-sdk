@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/stake"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -15,8 +16,9 @@ func setGenesis(gapp *GaiaApp, accs ...*auth.BaseAccount) error {
 	}
 
 	genesisState := GenesisState{
-		Accounts:  genaccs,
-		StakeData: stake.DefaultGenesisState(),
+		Accounts:     genaccs,
+		StakeData:    stake.DefaultGenesisState(),
+		SlashingData: slashing.HubDefaultGenesisState(),
 	}
 
 	stateBytes, err := wire.MarshalJSONIndent(gapp.cdc, genesisState)

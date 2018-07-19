@@ -47,7 +47,7 @@ func createTestCodec() *wire.Codec {
 	return cdc
 }
 
-func createTestInput(t *testing.T) (sdk.Context, bank.Keeper, stake.Keeper, params.Setter, Keeper) {
+func createTestInput(t *testing.T, defaults DefaultParams) (sdk.Context, bank.Keeper, stake.Keeper, params.Setter, Keeper) {
 	keyAcc := sdk.NewKVStoreKey("acc")
 	keyStake := sdk.NewKVStoreKey("stake")
 	keySlashing := sdk.NewKVStoreKey("slashing")
@@ -80,6 +80,10 @@ func createTestInput(t *testing.T) (sdk.Context, bank.Keeper, stake.Keeper, para
 	}
 	require.Nil(t, err)
 	keeper := NewKeeper(cdc, keySlashing, sk, params.Getter(), DefaultCodespace)
+
+	err = InitGenesis(ctx, &keeper, GenesisState{defaults})
+	require.Nil(t, err)
+
 	return ctx, ck, sk, params.Setter(), keeper
 }
 
