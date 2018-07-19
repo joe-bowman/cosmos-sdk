@@ -40,6 +40,32 @@ func GetKeyInfo(name string) (keys.Info, error) {
 	return keybase.Get(name)
 }
 
+// GetPassphrase returns a passphrase for a given name. It will first retrieve
+// the key info for that name if the type is local, it'll fetch input from
+// STDIN. Otherwise, an empty passphrase is returned. An error is returned if
+// the key info cannot be fetched or reading from STDIN fails.
+func GetPassphrase(name string) (string, error) {
+	var passphrase string
+
+	keyInfo, err := GetKeyInfo(name)
+	if err != nil {
+		return passphrase, err
+	}
+
+	// we only need a passphrase for locally stored keys
+	if keyInfo.GetType() == keys.TypeLocal {
+		buf := client.BufferStdin()
+		prompt := fmt.Sprintf("Passphrase to sign with '%s':", name)
+
+		passphrase, err = client.GetPassword(prompt, buf)
+		if err != nil {
+			return passphrase, fmt.Errorf("Error reading passphrase: %v", err)
+		}
+	}
+
+	return passphrase, nil
+}
+
 // initialize a keybase based on the configuration
 func GetKeyBaseFromDir(rootDir string) (keys.Keybase, error) {
 	if keybase == nil {
