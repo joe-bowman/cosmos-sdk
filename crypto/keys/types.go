@@ -7,13 +7,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys/hd"
 )
 
-// KeyInfo type constants
-const (
-	TypeLocal   = "local"
-	TypeLedger  = "ledger"
-	TypeOffline = "offline"
-)
-
 // Keybase exposes operations on a generic keystore
 type Keybase interface {
 
@@ -51,10 +44,31 @@ type Keybase interface {
 	ExportPrivateKeyObject(name string, passphrase string) (crypto.PrivKey, error)
 }
 
+// KeyType reflects a human-readable type for key listing.
+type KeyType uint
+
+// Info KeyTypes
+const (
+	TypeLocal   KeyType = 0
+	TypeLedger  KeyType = 1
+	TypeOffline KeyType = 2
+)
+
+// String implements the stringer interface for KeyType.
+func (kt KeyType) String() string {
+	keyTypes := map[KeyType]string{
+		TypeLocal:   "local",
+		TypeLedger:  "ledger",
+		TypeOffline: "offline",
+	}
+
+	return keyTypes[kt]
+}
+
 // Info is the publicly exposed information about a keypair
 type Info interface {
 	// Human-readable type for key listing
-	GetType() string
+	GetType() KeyType
 	// Name of the key
 	GetName() string
 	// Public key
@@ -80,7 +94,7 @@ func newLocalInfo(name string, pub crypto.PubKey, privArmor string) Info {
 	}
 }
 
-func (i localInfo) GetType() string {
+func (i localInfo) GetType() KeyType {
 	return TypeLocal
 }
 
@@ -107,7 +121,7 @@ func newLedgerInfo(name string, pub crypto.PubKey, path ccrypto.DerivationPath) 
 	}
 }
 
-func (i ledgerInfo) GetType() string {
+func (i ledgerInfo) GetType() KeyType {
 	return TypeLedger
 }
 
@@ -132,7 +146,7 @@ func newOfflineInfo(name string, pub crypto.PubKey) Info {
 	}
 }
 
-func (i offlineInfo) GetType() string {
+func (i offlineInfo) GetType() KeyType {
 	return TypeOffline
 }
 

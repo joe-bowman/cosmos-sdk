@@ -88,7 +88,7 @@ func Bech32KeyOutput(info keys.Info) (KeyOutput, error) {
 	}
 	return KeyOutput{
 		Name:    info.GetName(),
-		Type:    info.GetType(),
+		Type:    info.GetType().String(),
 		Address: account,
 		PubKey:  bechPubKey,
 	}, nil
