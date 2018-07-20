@@ -1,7 +1,6 @@
 package context
 
 import (
-	"fmt"
 	"io"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -41,19 +40,11 @@ func NewQueryContextFromCLI() QueryContext {
 		rpc = rpcclient.NewHTTP(nodeURI, "/websocket")
 	}
 
-	// TODO: remove the following deprecation code after Gaia-7000 is launched
-	keyName := viper.GetString(client.FlagName)
-	if keyName != "" {
-		fmt.Println("** Note --name is deprecated and will be removed next release. Please use --from instead **")
-	} else {
-		keyName = viper.GetString(client.FlagFrom)
-	}
-
 	return QueryContext{
 		Client:          rpc,
-		FromAddressName: keyName,
 		NodeURI:         nodeURI,
 		AccountStore:    ctxAccStoreName,
+		FromAddressName: viper.GetString(client.FlagFrom),
 		Height:          viper.GetInt64(client.FlagHeight),
 		TrustNode:       viper.GetBool(client.FlagTrustNode),
 		UseLedger:       viper.GetBool(client.FlagUseLedger),
