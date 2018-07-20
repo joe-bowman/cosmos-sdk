@@ -7,12 +7,21 @@ import (
 	authctx "github.com/cosmos/cosmos-sdk/x/auth/client/context"
 )
 
-// SendTx implements a handler that facilitates sending a series of messages in
-// a signed transaction given a TxContext and a QueryContext. It ensures that
-// the account has a proper number and sequence set. In addition, it builds and
-// signs a transaction with the supplied messages. Finally, it broadcasts the
-// signed transaction to a node.
-func SendTx(txCtx authctx.TxContext, queryCtx context.QueryContext, from []byte, name string, msgs []sdk.Msg) error {
+// SendTx implements a auxiliary handler that facilitates sending a series of
+// messages in a signed transaction given a TxContext and a QueryContext. It
+// ensures that the account exists, has a proper number and sequence set. In
+// addition, it builds and signs a transaction with the supplied messages.
+// Finally, it broadcasts the signed transaction to a node.
+func SendTx(txCtx authctx.TxContext, queryCtx context.QueryContext, name string, msgs []sdk.Msg) error {
+	if err := queryCtx.EnsureAccountExists(); err != nil {
+		return err
+	}
+
+	from, err := queryCtx.GetFromAddress()
+	if err != nil {
+		return err
+	}
+
 	if txCtx.AccountNumber == 0 {
 		accNum, err := queryCtx.GetAccountNumber(from)
 		if err != nil {
@@ -42,7 +51,7 @@ func SendTx(txCtx authctx.TxContext, queryCtx context.QueryContext, from []byte,
 		return err
 	}
 
-	// broadcast to Tendermint
+	// broadcast to a Tendermint node
 	if err := queryCtx.EnsureBroadcastTx(txBytes); err != nil {
 		return err
 	}
