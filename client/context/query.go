@@ -71,19 +71,18 @@ func (ctx QueryContext) GetAccount(address []byte) (auth.Account, error) {
 
 // GetFromAddress returns the from address from the context's name.
 func (ctx QueryContext) GetFromAddress() (from sdk.AccAddress, err error) {
+	if ctx.FromAddressName == "" {
+		return nil, errors.Errorf("must provide a from address name")
+	}
+
 	keybase, err := keys.GetKeyBase()
 	if err != nil {
 		return nil, err
 	}
 
-	name := ctx.FromAddressName
-	if name == "" {
-		return nil, errors.Errorf("must provide a from address name")
-	}
-
-	info, err := keybase.Get(name)
+	info, err := keybase.Get(ctx.FromAddressName)
 	if err != nil {
-		return nil, errors.Errorf("no key for: %s", name)
+		return nil, errors.Errorf("no key for: %s", ctx.FromAddressName)
 	}
 
 	return sdk.AccAddress(info.GetPubKey().Address()), nil
@@ -152,6 +151,27 @@ func (ctx QueryContext) BroadcastTxAsync(tx []byte) (*ctypes.ResultBroadcastTx, 
 	}
 
 	return res, err
+}
+
+// EnsureAccountExists ensures that an account exists for a given context. An
+// error is returned if it does not.
+func (ctx QueryContext) EnsureAccountExists() error {
+	addr, err := ctx.GetFromAddress()
+	if err != nil {
+		return err
+	}
+
+	accountBytes, err := ctx.QueryStore(auth.AddressStoreKey(addr), ctx.AccountStore)
+	if err != nil {
+		return err
+	}
+
+	if len(accountBytes) == 0 {
+		return errors.Errorf(`No account with address %s was found in the state.
+Are you sure there has been a transaction involving it?`, addr)
+	}
+
+	return nil
 }
 
 // EnsureBroadcastTx broadcasts a transactions either synchronously or
