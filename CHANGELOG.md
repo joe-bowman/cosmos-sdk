@@ -102,7 +102,6 @@ BUG FIXES
   * [\#3071](https://github.com/cosmos/cosmos-sdk/issues/3071) Catch overflow on block gas meter
 
 
-=======
 ## 0.27.0
 
 BREAKING CHANGES
