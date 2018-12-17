@@ -452,7 +452,7 @@
   version = "v0.12.0"
 
 [[projects]]
-  digest = "1:f94f468c7cd1fc3693ebc16011f26ec26538761cdcd182b3a28faa649a7d55e2"
+  digest = "1:dc6cdc842dc137625ead798ab7c9dd57c2713a776a7c35ee2fc01bb6b83e6f9d"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -517,7 +517,8 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "v0.27.3"
+  revision = "v0.27.3-chorus"
+  source = "github.com/joe-bowman/tendermint"
 
 [[projects]]
   digest = "1:a7485b2a69f996923f9d3406a9a853fd8eb31818515e985a830d71f88f6a925b"
