@@ -84,6 +84,8 @@ func withdrawDelegatorRewardsHandlerFn(cdc *codec.Codec, cliCtx context.CLIConte
 		if req.BaseReq.GenerateOnly {
 			rest.WriteGenerateStdTxResponse(w, cdc, cliCtx, req.BaseReq, msgs)
 			return
+		} else {
+			cliCtx.Async = true
 		}
 
 		rest.CompleteAndBroadcastTxREST(w, r, cliCtx, req.BaseReq, msgs, cdc)
@@ -124,6 +126,8 @@ func withdrawDelegationRewardsHandlerFn(cdc *codec.Codec, cliCtx context.CLICont
 		if req.BaseReq.GenerateOnly {
 			rest.WriteGenerateStdTxResponse(w, cdc, cliCtx, req.BaseReq, []sdk.Msg{msg})
 			return
+		} else {
+			cliCtx.Async = true
 		}
 
 		rest.CompleteAndBroadcastTxREST(w, r, cliCtx, req.BaseReq, []sdk.Msg{msg}, cdc)
@@ -159,6 +163,8 @@ func setDelegatorWithdrawalAddrHandlerFn(cdc *codec.Codec, cliCtx context.CLICon
 		if req.BaseReq.GenerateOnly {
 			rest.WriteGenerateStdTxResponse(w, cdc, cliCtx, req.BaseReq, []sdk.Msg{msg})
 			return
+		} else {
+			cliCtx.Async = true
 		}
 
 		rest.CompleteAndBroadcastTxREST(w, r, cliCtx, req.BaseReq, []sdk.Msg{msg}, cdc)
@@ -195,6 +201,8 @@ func withdrawValidatorRewardsHandlerFn(cdc *codec.Codec, cliCtx context.CLIConte
 		if req.BaseReq.GenerateOnly {
 			rest.WriteGenerateStdTxResponse(w, cdc, cliCtx, req.BaseReq, msgs)
 			return
+		} else {
+			cliCtx.Async = true
 		}
 
 		rest.CompleteAndBroadcastTxREST(w, r, cliCtx, req.BaseReq, msgs, cdc)

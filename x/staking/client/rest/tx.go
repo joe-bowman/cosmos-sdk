@@ -85,6 +85,7 @@ func postDelegationsHandlerFn(cdc *codec.Codec, kb keys.Keybase, cliCtx context.
 			return
 		}
 
+		cliCtx.Async = true
 		cliCtx = cliCtx.WithFromName(fromName).WithFromAddress(fromAddress)
 
 		if !bytes.Equal(cliCtx.GetFromAddress(), req.DelegatorAddr) {
@@ -134,7 +135,9 @@ func postRedelegationsHandlerFn(cdc *codec.Codec, kb keys.Keybase, cliCtx contex
 			return
 		}
 
+		cliCtx.Async = true
 		rest.CompleteAndBroadcastTxREST(w, r, cliCtx, req.BaseReq, []sdk.Msg{msg}, cdc)
+
 	}
 }
 
@@ -176,6 +179,7 @@ func postUnbondingDelegationsHandlerFn(cdc *codec.Codec, kb keys.Keybase, cliCtx
 			return
 		}
 
+		cliCtx.Async = true
 		rest.CompleteAndBroadcastTxREST(w, r, cliCtx, req.BaseReq, []sdk.Msg{msg}, cdc)
 	}
 }
