@@ -57,32 +57,13 @@ func withdrawHandlerFn(cdc *codec.Codec, kb keys.Keybase, cliCtx context.CLICont
       return
     }
 
-    simulateGas, gas, err := client.ReadGasFlag(baseReq.Gas)
-    if err != nil {
-      utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-      return
-    }
-
-    adjustment, ok := utils.ParseFloat64OrReturnBadRequest(w, baseReq.GasAdjustment, client.DefaultGasAdjustment)
-    if !ok {
-      return
-    }
-
-    txBldr := authtxb.TxBuilder{
-      Gas:           gas,
-      GasAdjustment: adjustment,
-      SimulateGas:   simulateGas,
-      ChainID:       baseReq.ChainID,
-    }
-
     //var msg sdk.Msg
 
     valAddr := sdk.ValAddress(info.GetAddress())
     msg := types.NewMsgWithdrawValidatorRewardsAll(valAddr)
 
     // build and sign the transaction, then broadcast to Tendermint
-    utils.CompleteAndBroadcastTxCli(txBldr, cliCtx, []sdk.Msg{msg})
-
+    utils.CompleteAndBroadcastTxREST(w, r, cliCtx, baseReq, []sdk.Msg{msg}, cdc)
   }
 }
 
@@ -106,24 +87,6 @@ func withdrawHandlerDelegatorFn(cdc *codec.Codec, kb keys.Keybase, cliCtx contex
       return
     }
 
-    simulateGas, gas, err := client.ReadGasFlag(baseReq.Gas)
-		if err != nil {
-			utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-			return
-		}
-
-		adjustment, ok := utils.ParseFloat64OrReturnBadRequest(w, baseReq.GasAdjustment, client.DefaultGasAdjustment)
-		if !ok {
-			return
-		}
-
-		txBldr := authtxb.TxBuilder{
-			Gas:           gas,
-			GasAdjustment: adjustment,
-			SimulateGas:   simulateGas,
-			ChainID:       baseReq.ChainID,
-		}
-
     delAddr := sdk.AccAddress(info.GetAddress())
 
     var msg sdk.Msg
@@ -141,7 +104,7 @@ func withdrawHandlerDelegatorFn(cdc *codec.Codec, kb keys.Keybase, cliCtx contex
     }
 
     // build and sign the transaction, then broadcast to Tendermint
-    utils.CompleteAndBroadcastTxCli(txBldr, cliCtx, []sdk.Msg{msg})
+		utils.CompleteAndBroadcastTxREST(w, r, cliCtx, baseReq, []sdk.Msg{msg}, cdc)
   }
 }
 
@@ -181,25 +144,7 @@ func setWithdrawAddressHandlerFn(cdc *codec.Codec, kb keys.Keybase, cliCtx conte
 
     msg := types.NewMsgSetWithdrawAddress(withdrawAddr, valAddr)
 
-    simulateGas, gas, err := client.ReadGasFlag(baseReq.Gas)
-    if err != nil {
-      utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-      return
-    }
-
-    adjustment, ok := utils.ParseFloat64OrReturnBadRequest(w, baseReq.GasAdjustment, client.DefaultGasAdjustment)
-    if !ok {
-      return
-    }
-
-    txBldr := authtxb.TxBuilder{
-      Gas:           gas,
-      GasAdjustment: adjustment,
-      SimulateGas:   simulateGas,
-      ChainID:       baseReq.ChainID,
-    }
-
     // build and sign the transaction, then broadcast to Tendermint
-    utils.CompleteAndBroadcastTxCli(txBldr, cliCtx, []sdk.Msg{msg})
+    utils.CompleteAndBroadcastTxREST(w, r, cliCtx, baseReq, []sdk.Msg{msg}, cdc)
   }
 }
