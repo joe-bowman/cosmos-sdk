@@ -69,7 +69,9 @@ func ReadOrCreatePrivValidator(privValFile string) crypto.PubKey {
 		privValidator.Save()
 	}
 
-	return privValidator.GetPubKey()
+	pubkey,_ := privValidator.GetPubKey()
+
+	return pubkey
 }
 
 // InitializeNodeValidatorFiles creates private validator and p2p configuration files.
