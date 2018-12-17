@@ -58,6 +58,7 @@ import (
 
 	authRest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	bankRest "github.com/cosmos/cosmos-sdk/x/bank/client/rest"
+	distRest "github.com/cosmos/cosmos-sdk/x/distribution/client/rest"
 	govRest "github.com/cosmos/cosmos-sdk/x/gov/client/rest"
 	slashingRest "github.com/cosmos/cosmos-sdk/x/slashing/client/rest"
 	stakeRest "github.com/cosmos/cosmos-sdk/x/stake/client/rest"
@@ -387,6 +388,7 @@ func registerRoutes(rs *RestServer) {
 	rpc.RegisterRoutes(rs.CliCtx, rs.Mux)
 	tx.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc)
 	authRest.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc, "acc")
+	distRest.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc, rs.KeyBase)
 	bankRest.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc, rs.KeyBase)
 	stakeRest.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc, rs.KeyBase)
 	slashingRest.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc, rs.KeyBase)
