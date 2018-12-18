@@ -23,16 +23,19 @@ func RegisterRoutes(cliCtx context.CLIContext, r *mux.Router, cdc *codec.Codec, 
 
 type WithdrawDelegatorReq struct {
 	BaseReq           utils.BaseReq    `json:"base_req"`
-  OnlyFromValidator string           `json:"only_from_validator"`
+	OnlyFromValidator string           `json:"only_from_validator"`
+	Async             bool             `json:"async"`
 }
 
 type WithdrawValidatorReq struct {
 	BaseReq      utils.BaseReq  `json:"base_req"`
+	Async        bool           `json:"async"`
 }
 
 type SetWithdrawAddressReq struct {
 	BaseReq      utils.BaseReq  `json:"base_req"`
 	WithdrawAddr string         `json:"withdraw_addr"` // bech32 Address of the account to withdraw to
+	Async        bool           `json:"async"`
 }
 
 func withdrawHandlerFn(cdc *codec.Codec, kb keys.Keybase, cliCtx context.CLIContext) http.HandlerFunc {
@@ -59,6 +62,10 @@ func withdrawHandlerFn(cdc *codec.Codec, kb keys.Keybase, cliCtx context.CLICont
 
     valAddr := sdk.ValAddress(info.GetAddress())
     msg := types.NewMsgWithdrawValidatorRewardsAll(valAddr)
+
+		if req.Async == true {
+		  cliCtx.Async = true
+		}
 
     // build and sign the transaction, then broadcast to Tendermint
     utils.CompleteAndBroadcastTxREST(w, r, cliCtx, baseReq, []sdk.Msg{msg}, cdc)
@@ -102,6 +109,10 @@ func withdrawHandlerDelegatorFn(cdc *codec.Codec, kb keys.Keybase, cliCtx contex
     }
 
     // build and sign the transaction, then broadcast to Tendermint
+		if req.Async == true {
+		  cliCtx.Async = true
+		}
+
 		utils.CompleteAndBroadcastTxREST(w, r, cliCtx, baseReq, []sdk.Msg{msg}, cdc)
   }
 }
@@ -141,6 +152,10 @@ func setWithdrawAddressHandlerFn(cdc *codec.Codec, kb keys.Keybase, cliCtx conte
     }
 
     msg := types.NewMsgSetWithdrawAddress(withdrawAddr, valAddr)
+
+		if req.Async == true {
+		  cliCtx.Async = true
+		}
 
     // build and sign the transaction, then broadcast to Tendermint
     utils.CompleteAndBroadcastTxREST(w, r, cliCtx, baseReq, []sdk.Msg{msg}, cdc)
