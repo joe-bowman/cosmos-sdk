@@ -56,8 +56,11 @@ func withdrawHandlerFn(cdc *codec.Codec, kb keys.Keybase, cliCtx context.CLICont
     }
 
     //var msg sdk.Msg
+
     valAddr := sdk.ValAddress(info.GetAddress())
     msg := types.NewMsgWithdrawValidatorRewardsAll(valAddr)
+
+		cliCtx.Async = true
 
     // build and sign the transaction, then broadcast to Tendermint
     utils.CompleteAndBroadcastTxREST(w, r, cliCtx, baseReq, []sdk.Msg{msg}, cdc)
@@ -100,6 +103,8 @@ func withdrawHandlerDelegatorFn(cdc *codec.Codec, kb keys.Keybase, cliCtx contex
       msg = types.NewMsgWithdrawDelegatorRewardsAll(delAddr)
     }
 
+		cliCtx.Async = true
+
     // build and sign the transaction, then broadcast to Tendermint
 		utils.CompleteAndBroadcastTxREST(w, r, cliCtx, baseReq, []sdk.Msg{msg}, cdc)
   }
@@ -141,7 +146,7 @@ func setWithdrawAddressHandlerFn(cdc *codec.Codec, kb keys.Keybase, cliCtx conte
 
     msg := types.NewMsgSetWithdrawAddress(withdrawAddr, valAddr)
 
-		// build and sign the transaction, then broadcast to Tendermint
+    // build and sign the transaction, then broadcast to Tendermint
     utils.CompleteAndBroadcastTxREST(w, r, cliCtx, baseReq, []sdk.Msg{msg}, cdc)
   }
 }
