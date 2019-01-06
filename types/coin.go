@@ -263,7 +263,7 @@ func (coins Coins) IsAnyGT(coinsB Coins) bool {
 		return false
 	}
 
-	for _, coin := range coins {
+	for _, coin := range diff {
 		if coin.IsPositive() {
 			return true
 		}
@@ -284,14 +284,13 @@ func (coins Coins) IsAllGT(coinsB Coins) bool {
 
 // IsAnyGTE returns true if for any denom in coins, the denom is present at a
 //an  equal or greater amount in coinsB
-
 func (coins Coins) IsAnyGTE(coinsB Coins) bool {
 	diff, _ := coins.SafeMinus(coinsB)
 	if len(diff) == 0 {
 		return false
 	}
 
-	for _, coin := range coins {
+	for _, coin := range diff {
 		if coin.IsNotNegative() {
 			return true
 		}
