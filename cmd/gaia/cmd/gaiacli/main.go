@@ -26,6 +26,7 @@ import (
 	bank "github.com/cosmos/cosmos-sdk/x/bank/client/rest"
 	dist "github.com/cosmos/cosmos-sdk/x/distribution/client/rest"
 	gov "github.com/cosmos/cosmos-sdk/x/gov/client/rest"
+	mint "github.com/cosmos/cosmos-sdk/x/mint/client/rest"
 	slashing "github.com/cosmos/cosmos-sdk/x/slashing/client/rest"
 	stake "github.com/cosmos/cosmos-sdk/x/stake/client/rest"
 
@@ -165,6 +166,7 @@ func registerRoutes(rs *lcd.RestServer) {
 	stake.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc, rs.KeyBase)
 	slashing.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc, rs.KeyBase)
 	dist.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc, rs.KeyBase)
+	mint.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc)
 	gov.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc)
 }
 

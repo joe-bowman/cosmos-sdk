@@ -19,6 +19,7 @@ func RegisterRoutes(cliCtx context.CLIContext, r *mux.Router, cdc *codec.Codec, 
 	r.HandleFunc("/distribution/withdraw-validator-rewards", withdrawHandlerFn(cdc, kb, cliCtx)).Methods("POST")
 	r.HandleFunc("/distribution/set-withdraw-address", setWithdrawAddressHandlerFn(cdc, kb, cliCtx)).Methods("POST")
 	r.HandleFunc("/distribution/withdraw-delegator-rewards", withdrawHandlerDelegatorFn(cdc, kb, cliCtx)).Methods("POST")
+	RegisterRoutesQ(cliCtx, r, cdc)
 }
 
 type WithdrawDelegatorReq struct {
