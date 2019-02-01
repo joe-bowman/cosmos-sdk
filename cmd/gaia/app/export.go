@@ -152,7 +152,7 @@ func (app *GaiaApp) prepareRemoveValidator(ctx sdk.Context, kickValidators []sdk
 	// 2. unbond all outgoing delegations
 	// 3. clear account to CommunityPool
 	// 4. Cleanup
-
+        feePool := app.distrKeeper.GetFeePool(ctx)
 	for _, removeValidator := range kickValidators {
 		// 1. Unbond all delegations
 		delegations := app.stakeKeeper.GetValidatorDelegations(ctx, removeValidator)
