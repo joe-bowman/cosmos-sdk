@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/cosmos/cosmos-sdk/types"
 	"os"
 	"testing"
 
@@ -55,6 +56,6 @@ func TestGaiadExport(t *testing.T) {
 
 	// Making a new app object with the db, so that initchain hasn't been called
 	newGapp := NewGaiaApp(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, true)
-	_, _, err := newGapp.ExportAppStateAndValidators(false)
+	_, _, err := newGapp.ExportAppStateAndValidators(false, []types.ValAddress{})
 	require.NoError(t, err, "ExportAppStateAndValidators should not have an error")
 }

@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmtypes "github.com/tendermint/tendermint/types"
@@ -18,12 +19,13 @@ import (
 )
 
 // export the state of gaia for a genesis file
-func (app *GaiaApp) ExportAppStateAndValidators(forZeroHeight bool) (
+func (app *GaiaApp) ExportAppStateAndValidators(forZeroHeight bool, kickValidators []sdk.ValAddress) (
 	appState json.RawMessage, validators []tmtypes.GenesisValidator, err error) {
 
 	// as if they could withdraw from the start of the next block
 	ctx := app.NewContext(true, abci.Header{Height: app.LastBlockHeight()})
 
+	app.prepareRemoveValidator(ctx, kickValidators)
 	if forZeroHeight {
 		app.prepForZeroHeightGenesis(ctx)
 	}
@@ -141,4 +143,60 @@ func (app *GaiaApp) prepForZeroHeightGenesis(ctx sdk.Context) {
 		app.slashingKeeper.SetValidatorSigningInfo(ctx, addr, info)
 		return false
 	})
+}
+
+// kick validators/accounts from state
+func (app *GaiaApp) prepareRemoveValidator(ctx sdk.Context, kickValidators []sdk.ValAddress) {
+	// For each validator
+	// 1. remove validator delegations
+	// 2. unbond all outgoing delegations
+	// 3. clear account to CommunityPool
+	// 4. Cleanup
+
+	for _, removeValidator := range kickValidators {
+		// 1. Unbond all delegations
+		delegations := app.stakeKeeper.GetValidatorDelegations(ctx, removeValidator)
+
+		for _, delegation := range delegations {
+			_, err := app.stakeKeeper.BeginUnbonding(ctx, delegation.DelegatorAddr, delegation.ValidatorAddr, delegation.Shares)
+			if err != nil {
+				panic("")
+			}
+		}
+
+		stake.EndBlocker(ctx, app.stakeKeeper)
+		ctx = ctx.WithBlockTime(ctx.BlockHeader().Time.Add(app.stakeKeeper.UnbondingTime(ctx)).Add(time.Hour * 24 * 7))
+		stake.EndBlocker(ctx, app.stakeKeeper)
+
+		app.assertRuntimeInvariantsOnContext(ctx)
+
+		// 2. Remove delegations
+		validatorDelegations := app.stakeKeeper.GetDelegatorDelegations(ctx, sdk.AccAddress(removeValidator), 10000)
+		for _, delegation := range validatorDelegations {
+			_, err := app.stakeKeeper.BeginUnbonding(ctx, delegation.DelegatorAddr, delegation.ValidatorAddr, delegation.Shares)
+			if err != nil {
+				panic("")
+			}
+		}
+
+		stake.EndBlocker(ctx, app.stakeKeeper)
+		ctx = ctx.WithBlockTime(ctx.BlockHeader().Time.Add(app.stakeKeeper.UnbondingTime(ctx)).Add(time.Hour * 24 * 7))
+		stake.EndBlocker(ctx, app.stakeKeeper)
+
+		// 3. WIPE account
+		account := app.accountKeeper.GetAccount(ctx, sdk.AccAddress(removeValidator))
+		coins := account.GetCoins()
+		feePool = app.distrKeeper.GetFeePool(ctx)
+		feePool.ValidateGenesis()
+		feePool.CommunityPool = feePool.CommunityPool.Plus(distr.NewDecCoins(coins))
+		app.distrKeeper.SetFeePool(ctx, feePool)
+
+		account.SetCoins(sdk.Coins{})
+		app.accountKeeper.SetAccount(ctx, account)
+
+		app.assertRuntimeInvariantsOnContext(ctx)
+
+		// 4. Cleanup
+		// Nothing yet
+	}
 }

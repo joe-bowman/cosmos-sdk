@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"github.com/cosmos/cosmos-sdk/types"
 	"io"
 	"os"
 	"path/filepath"
@@ -19,7 +20,7 @@ type (
 
 	// AppExporter is a function that dumps all app state to
 	// JSON-serializable structure and returns the current validator set.
-	AppExporter func(log.Logger, dbm.DB, io.Writer, int64, bool) (json.RawMessage, []tmtypes.GenesisValidator, error)
+	AppExporter func(log.Logger, dbm.DB, io.Writer, int64, bool, []types.ValAddress) (json.RawMessage, []tmtypes.GenesisValidator, error)
 )
 
 func openDB(rootDir string) (dbm.DB, error) {
