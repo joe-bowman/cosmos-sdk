@@ -167,7 +167,6 @@ func registerRoutes(rs *lcd.RestServer) {
 	dist.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc, distcmd.StoreKey)
 	staking.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc, rs.KeyBase)
 	slashing.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc, rs.KeyBase)
-	distRest.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc, rs.KeyBase)
 	mint.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc)
 	gov.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc)
 }
