@@ -74,15 +74,25 @@ build:
 ifeq ($(OS),Windows_NT)
 	go build $(BUILD_FLAGS) -o build/gaiad.exe ./cmd/gaia/cmd/gaiad
 	go build $(BUILD_FLAGS) -o build/gaiacli.exe ./cmd/gaia/cmd/gaiacli
-else
+  ifeq ($(GOOS),windows)
+	go build $(BUILD_FLAGS) -o build/gaiad.exe ./cmd/gaia/cmd/gaiad
+	go build $(BUILD_FLAGS) -o build/gaiacli.exe ./cmd/gaia/cmd/gaiacli
+  else
 	go build $(BUILD_FLAGS) -o build/gaiad ./cmd/gaia/cmd/gaiad
 	go build $(BUILD_FLAGS) -o build/gaiacli ./cmd/gaia/cmd/gaiacli
 	go build $(BUILD_FLAGS) -o build/gaiareplay ./cmd/gaia/cmd/gaiareplay
 	go build $(BUILD_FLAGS) -o build/gaiakeyutil ./cmd/gaia/cmd/gaiakeyutil
+  endif
 endif
 
 build-linux: vendor-deps
 	LEDGER_ENABLED=false GOOS=linux GOARCH=amd64 $(MAKE) build
+build-linux-user: vendor-deps
+	LEDGER_ENABLED=true GOOS=linux GOARCH=amd64 $(MAKE) build
+build-darwin-user: vendor-deps
+	LEDGER_ENABLED=true GOOS=darwin GOARCH=amd64 $(MAKE) build
+build-windows-user: vendor-deps
+	LEDGER_ENABLED=true GOOS=windows GOARCH=amd64 $(MAKE) build
 
 update_gaia_lite_docs:
 	@statik -src=client/lcd/swagger-ui -dest=client/lcd -f
