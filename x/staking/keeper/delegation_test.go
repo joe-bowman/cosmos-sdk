@@ -188,25 +188,19 @@ func TestUnbondDelegation(t *testing.T) {
 	require.Equal(t, startTokens, validator.BondedTokens())
 
 	keeper.bankKeeper.AddCoins(ctx, addrDels[0], sdk.NewCoins(sdk.NewCoin("onestake", issuedShares.RoundInt())))
-	//delegation := types.NewDelegation(addrDels[0], addrVals[0], issuedShares)
-	//keeper.Delegate(ctx, addrDels[0], issuedShares.RoundInt(), validator, true)
-	//keeper.SetDelegation(ctx, delegation)
 
 	bondTokens := sdk.TokensFromTendermintPower(6)
 	amount, err := keeper.unbond(ctx, addrDels[0], addrVals[0], bondTokens.ToDec())
 	require.NoError(t, err)
 	require.Equal(t, bondTokens, amount) // shares to be added to an unbonding delegation
 
-	//delegation, found := keeper.GetDelegation(ctx, addrDels[0], addrVals[0])
-	//require.True(t, found)
-	//validator, found = keeper.GetValidator(ctx, addrVals[0])
-	//require.True(t, found)
+	validator, found := keeper.GetValidator(ctx, addrVals[0])
+	require.True(t, found)
 	pool = keeper.GetPool(ctx)
 
 	remainingTokens := startTokens.Sub(bondTokens)
 	require.True(t, keeper.bankKeeper.HasCoins(ctx, addrDels[0], sdk.NewCoins(sdk.NewCoin("onestake", remainingTokens))))
-	fmt.Printf("Remaining: %s\n", remainingTokens.String())
-	fmt.Printf("Bonded: %s\n", validator.BondedTokens().String())
+
 	require.Equal(t, remainingTokens, validator.BondedTokens())
 	require.Equal(t, bondTokens, pool.NotBondedTokens, "%v", pool)
 	require.Equal(t, remainingTokens, pool.BondedTokens)
@@ -229,8 +223,7 @@ func TestUnbondingDelegationsMaxEntries(t *testing.T) {
 	require.Equal(t, startTokens, pool.BondedTokens)
 	require.Equal(t, startTokens, validator.BondedTokens())
 
-	delegation := types.NewDelegation(addrDels[0], addrVals[0], issuedShares)
-	keeper.SetDelegation(ctx, delegation)
+	keeper.bankKeeper.AddCoins(ctx, addrDels[0], sdk.NewCoins(sdk.NewCoin("onestake", issuedShares.RoundInt())))
 
 	maxEntries := keeper.MaxEntries(ctx)
 
@@ -276,8 +269,7 @@ func TestUndelegateSelfDelegationBelowMinSelfDelegation(t *testing.T) {
 	keeper.SetPool(ctx, pool)
 	validator = TestingUpdateValidator(keeper, ctx, validator, true)
 	pool = keeper.GetPool(ctx)
-	selfDelegation := types.NewDelegation(sdk.AccAddress(addrVals[0].Bytes()), addrVals[0], issuedShares)
-	keeper.SetDelegation(ctx, selfDelegation)
+	keeper.bankKeeper.AddCoins(ctx, sdk.AccAddress(addrVals[0].Bytes()), sdk.NewCoins(sdk.NewCoin("onestake", issuedShares.RoundInt())))
 
 	// create a second delegation to this validator
 	keeper.DeleteValidatorByPowerIndex(ctx, validator)
@@ -287,8 +279,7 @@ func TestUndelegateSelfDelegationBelowMinSelfDelegation(t *testing.T) {
 	keeper.SetPool(ctx, pool)
 	validator = TestingUpdateValidator(keeper, ctx, validator, true)
 	pool = keeper.GetPool(ctx)
-	delegation := types.NewDelegation(addrDels[0], addrVals[0], issuedShares)
-	keeper.SetDelegation(ctx, delegation)
+	keeper.bankKeeper.AddCoins(ctx, addrDels[0], sdk.NewCoins(sdk.NewCoin("onestake", issuedShares.RoundInt())))
 
 	val0AccAddr := sdk.AccAddress(addrVals[0].Bytes())
 	_, err := keeper.Undelegate(ctx, val0AccAddr, addrVals[0], sdk.TokensFromTendermintPower(6).ToDec())
@@ -320,8 +311,7 @@ func TestUndelegateFromUnbondingValidator(t *testing.T) {
 	keeper.SetPool(ctx, pool)
 	validator = TestingUpdateValidator(keeper, ctx, validator, true)
 	pool = keeper.GetPool(ctx)
-	selfDelegation := types.NewDelegation(sdk.AccAddress(addrVals[0].Bytes()), addrVals[0], issuedShares)
-	keeper.SetDelegation(ctx, selfDelegation)
+	keeper.bankKeeper.AddCoins(ctx, sdk.AccAddress(addrVals[0].Bytes()), sdk.NewCoins(sdk.NewCoin("onestake", issuedShares.RoundInt())))
 
 	// create a second delegation to this validator
 	keeper.DeleteValidatorByPowerIndex(ctx, validator)
@@ -331,8 +321,7 @@ func TestUndelegateFromUnbondingValidator(t *testing.T) {
 	keeper.SetPool(ctx, pool)
 	validator = TestingUpdateValidator(keeper, ctx, validator, true)
 	pool = keeper.GetPool(ctx)
-	delegation := types.NewDelegation(addrDels[0], addrVals[0], issuedShares)
-	keeper.SetDelegation(ctx, delegation)
+	keeper.bankKeeper.AddCoins(ctx, addrDels[0], sdk.NewCoins(sdk.NewCoin("onestake", issuedShares.RoundInt())))
 
 	header := ctx.BlockHeader()
 	blockHeight := int64(10)
@@ -391,8 +380,7 @@ func TestUndelegateFromUnbondedValidator(t *testing.T) {
 	validator = TestingUpdateValidator(keeper, ctx, validator, true)
 	pool = keeper.GetPool(ctx)
 	val0AccAddr := sdk.AccAddress(addrVals[0].Bytes())
-	selfDelegation := types.NewDelegation(val0AccAddr, addrVals[0], issuedShares)
-	keeper.SetDelegation(ctx, selfDelegation)
+	keeper.bankKeeper.AddCoins(ctx, val0AccAddr, sdk.NewCoins(sdk.NewCoin("onestake", issuedShares.RoundInt())))
 
 	// create a second delegation to this validator
 	keeper.DeleteValidatorByPowerIndex(ctx, validator)
@@ -402,8 +390,7 @@ func TestUndelegateFromUnbondedValidator(t *testing.T) {
 	keeper.SetPool(ctx, pool)
 	validator = TestingUpdateValidator(keeper, ctx, validator, true)
 	pool = keeper.GetPool(ctx)
-	delegation := types.NewDelegation(addrDels[0], addrVals[0], issuedShares)
-	keeper.SetDelegation(ctx, delegation)
+	keeper.bankKeeper.AddCoins(ctx, addrDels[0], sdk.NewCoins(sdk.NewCoin("onestake", issuedShares.RoundInt())))
 
 	ctx = ctx.WithBlockHeight(10)
 	ctx = ctx.WithBlockTime(time.Unix(333, 0))
@@ -462,8 +449,7 @@ func TestUnbondingAllDelegationFromValidator(t *testing.T) {
 	validator = TestingUpdateValidator(keeper, ctx, validator, true)
 	pool = keeper.GetPool(ctx)
 	val0AccAddr := sdk.AccAddress(addrVals[0].Bytes())
-	selfDelegation := types.NewDelegation(val0AccAddr, addrVals[0], issuedShares)
-	keeper.SetDelegation(ctx, selfDelegation)
+	keeper.bankKeeper.AddCoins(ctx, val0AccAddr, sdk.NewCoins(sdk.NewCoin("onestake", issuedShares.RoundInt())))
 
 	// create a second delegation to this validator
 	keeper.DeleteValidatorByPowerIndex(ctx, validator)
@@ -473,8 +459,7 @@ func TestUnbondingAllDelegationFromValidator(t *testing.T) {
 	keeper.SetPool(ctx, pool)
 	validator = TestingUpdateValidator(keeper, ctx, validator, true)
 	pool = keeper.GetPool(ctx)
-	delegation := types.NewDelegation(addrDels[0], addrVals[0], issuedShares)
-	keeper.SetDelegation(ctx, delegation)
+	keeper.bankKeeper.AddCoins(ctx, addrDels[0], sdk.NewCoins(sdk.NewCoin("onestake", issuedShares.RoundInt())))
 
 	ctx = ctx.WithBlockHeight(10)
 	ctx = ctx.WithBlockTime(time.Unix(333, 0))
@@ -628,8 +613,7 @@ func TestRedelegationMaxEntries(t *testing.T) {
 	validator = TestingUpdateValidator(keeper, ctx, validator, true)
 	pool = keeper.GetPool(ctx)
 	val0AccAddr := sdk.AccAddress(addrVals[0].Bytes())
-	selfDelegation := types.NewDelegation(val0AccAddr, addrVals[0], issuedShares)
-	keeper.SetDelegation(ctx, selfDelegation)
+	keeper.bankKeeper.AddCoins(ctx, val0AccAddr, sdk.NewCoins(sdk.NewCoin("onestake", issuedShares.RoundInt())))
 
 	// create a second validator
 	validator2 := types.NewValidator(addrVals[1], PKs[1], types.Description{}, "TWO")
@@ -679,8 +663,7 @@ func TestRedelegateSelfDelegation(t *testing.T) {
 	validator = TestingUpdateValidator(keeper, ctx, validator, true)
 	pool = keeper.GetPool(ctx)
 	val0AccAddr := sdk.AccAddress(addrVals[0].Bytes())
-	selfDelegation := types.NewDelegation(val0AccAddr, addrVals[0], issuedShares)
-	keeper.SetDelegation(ctx, selfDelegation)
+	keeper.bankKeeper.AddCoins(ctx, val0AccAddr, sdk.NewCoins(sdk.NewCoin("onestake", issuedShares.RoundInt())))
 
 	// create a second validator
 	validator2 := types.NewValidator(addrVals[1], PKs[1], types.Description{}, "TWO")
@@ -698,9 +681,7 @@ func TestRedelegateSelfDelegation(t *testing.T) {
 	keeper.SetPool(ctx, pool)
 	validator = TestingUpdateValidator(keeper, ctx, validator, true)
 	pool = keeper.GetPool(ctx)
-
-	delegation := types.NewDelegation(addrDels[0], addrVals[0], issuedShares)
-	keeper.SetDelegation(ctx, delegation)
+	keeper.bankKeeper.AddCoins(ctx, addrDels[0], sdk.NewCoins(sdk.NewCoin("onestake", issuedShares.RoundInt())))
 
 	_, err := keeper.BeginRedelegation(ctx, val0AccAddr, addrVals[0], addrVals[1], delTokens.ToDec())
 	require.NoError(t, err)
@@ -731,8 +712,7 @@ func TestRedelegateFromUnbondingValidator(t *testing.T) {
 	validator = TestingUpdateValidator(keeper, ctx, validator, true)
 	pool = keeper.GetPool(ctx)
 	val0AccAddr := sdk.AccAddress(addrVals[0].Bytes())
-	selfDelegation := types.NewDelegation(val0AccAddr, addrVals[0], issuedShares)
-	keeper.SetDelegation(ctx, selfDelegation)
+	keeper.bankKeeper.AddCoins(ctx, val0AccAddr, sdk.NewCoins(sdk.NewCoin("onestake", issuedShares.RoundInt())))
 
 	// create a second delegation to this validator
 	keeper.DeleteValidatorByPowerIndex(ctx, validator)
@@ -742,8 +722,7 @@ func TestRedelegateFromUnbondingValidator(t *testing.T) {
 	keeper.SetPool(ctx, pool)
 	validator = TestingUpdateValidator(keeper, ctx, validator, true)
 	pool = keeper.GetPool(ctx)
-	delegation := types.NewDelegation(addrDels[0], addrVals[0], issuedShares)
-	keeper.SetDelegation(ctx, delegation)
+	keeper.bankKeeper.AddCoins(ctx, addrDels[0], sdk.NewCoins(sdk.NewCoin("onestake", issuedShares.RoundInt())))
 
 	// create a second validator
 	validator2 := types.NewValidator(addrVals[1], PKs[1], types.Description{}, "TWO")
@@ -810,8 +789,7 @@ func TestRedelegateFromUnbondedValidator(t *testing.T) {
 	validator = TestingUpdateValidator(keeper, ctx, validator, true)
 	pool = keeper.GetPool(ctx)
 	val0AccAddr := sdk.AccAddress(addrVals[0].Bytes())
-	selfDelegation := types.NewDelegation(val0AccAddr, addrVals[0], issuedShares)
-	keeper.SetDelegation(ctx, selfDelegation)
+	keeper.bankKeeper.AddCoins(ctx, val0AccAddr, sdk.NewCoins(sdk.NewCoin("onestake", issuedShares.RoundInt())))
 
 	// create a second delegation to this validator
 	keeper.DeleteValidatorByPowerIndex(ctx, validator)
@@ -821,8 +799,7 @@ func TestRedelegateFromUnbondedValidator(t *testing.T) {
 	keeper.SetPool(ctx, pool)
 	validator = TestingUpdateValidator(keeper, ctx, validator, true)
 	pool = keeper.GetPool(ctx)
-	delegation := types.NewDelegation(addrDels[0], addrVals[0], issuedShares)
-	keeper.SetDelegation(ctx, delegation)
+	keeper.bankKeeper.AddCoins(ctx, addrDels[0], sdk.NewCoins(sdk.NewCoin("onestake", issuedShares.RoundInt())))
 
 	// create a second validator
 	validator2 := types.NewValidator(addrVals[1], PKs[1], types.Description{}, "TWO")
