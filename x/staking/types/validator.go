@@ -393,7 +393,7 @@ func (v Validator) RemoveDelShares(pool Pool, delShares sdk.Dec) (Validator, Poo
 
 	remainingShares := v.DelegatorShares.Sub(delShares)
 	var issuedTokens sdk.Int
-	fmt.Printf("Bonded Before: %s", v.GetBondedTokens().String())
+
 	if remainingShares.IsZero() {
 
 		// last delegation share gets any trimmings
@@ -409,7 +409,6 @@ func (v Validator) RemoveDelShares(pool Pool, delShares sdk.Dec) (Validator, Poo
 			panic("attempting to remove more tokens than available in validator")
 		}
 	}
-	fmt.Printf("Bonded After: %s", v.GetBondedTokens().String())
 
 	v.DelegatorShares = remainingShares
 	if v.Status == sdk.Bonded {

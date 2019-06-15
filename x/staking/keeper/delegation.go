@@ -498,7 +498,6 @@ func (k Keeper) unbond(ctx sdk.Context, delAddr sdk.AccAddress, valAddr sdk.ValA
 	sharesDenomName := strings.ToLower(fmt.Sprintf("%s%s", validator.GetSharesDenomPrefix(), k.GetParams(ctx).BondDenom))
 
 	currentCoins := k.bankKeeper.GetCoins(ctx, delAddr)
-	fmt.Printf("%v", currentCoins)
 	currentShares := currentCoins.AmountOf(sharesDenomName)
 
 	if currentShares == sdk.ZeroInt() {
@@ -509,8 +508,6 @@ func (k Keeper) unbond(ctx sdk.Context, delAddr sdk.AccAddress, valAddr sdk.ValA
 	k.BeforeDelegationSharesModified(ctx, delAddr, valAddr)
 
 	// ensure that we have enough shares to remove
-	fmt.Printf("Current Shares: %s\n", currentShares.String())
-	fmt.Printf("SharesInt: %s\n", sharesInt.String())
 
 	if currentShares.LT(sharesInt) {
 		return amount, types.ErrNotEnoughDelegationShares(k.Codespace(), shares.String())
@@ -541,9 +538,7 @@ func (k Keeper) unbond(ctx sdk.Context, delAddr sdk.AccAddress, valAddr sdk.ValA
 	//}
 	unbondAmt := shares.Mul(validator.GetSharesConversionRate())
 	// remove the shares and coins from the validator
-	fmt.Printf("Unbond Amnt: %s", unbondAmt.String())
 	validator, amount = k.RemoveValidatorTokensAndShares(ctx, validator, unbondAmt)
-	fmt.Printf("Amnt: %s", amount.String())
 	k.SetValidator(ctx, validator)
 	if validator.DelegatorShares.IsZero() && validator.Status == sdk.Unbonded {
 		// if not unbonded, we must instead remove validator in EndBlocker once it finishes its unbonding period
