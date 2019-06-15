@@ -257,13 +257,13 @@ func BuildCreateValidatorMsg(cliCtx context.CLIContext, txBldr authtxb.TxBuilder
 		return txBldr, nil, fmt.Errorf(staking.ErrMinSelfDelegationInvalid(staking.DefaultCodespace).Error())
 	}
 
-  sharesDenominationPrefix := viper.GetString(FlagSharesDenomPrefix)
-	if (sharesDenominationPrefix.length() > 6 || sharesDenominationPrefix.length() < 2) {
+	sharesDenominationPrefix := viper.GetString(FlagSharesDenomPrefix)
+	if len(sharesDenominationPrefix) > 6 || len(sharesDenominationPrefix) < 2 {
 		return txBldr, nil, fmt.Errorf(staking.ErrDenomPrefixInvalid(staking.DefaultCodespace).Error())
 	}
 
 	msg := staking.NewMsgCreateValidator(
-		sdk.ValAddress(valAddr), pk, amount, description, commissionMsg, minSelfDelegation, sharesDenominationPrefix
+		sdk.ValAddress(valAddr), pk, amount, description, commissionMsg, minSelfDelegation, sharesDenominationPrefix,
 	)
 
 	if viper.GetBool(client.FlagGenerateOnly) {

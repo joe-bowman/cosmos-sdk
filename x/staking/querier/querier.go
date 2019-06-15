@@ -201,13 +201,14 @@ func queryValidatorDelegations(ctx sdk.Context, cdc *codec.Codec, req abci.Reque
 		return []byte{}, sdk.ErrInternal(fmt.Sprintf("failed to parse params: %s", err))
 	}
 
-	delegations := k.GetValidatorDelegations(ctx, params.ValidatorAddr)
-
-	res, errRes = codec.MarshalJSONIndent(cdc, delegations)
-	if errRes != nil {
-		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", errRes.Error()))
-	}
-	return res, nil
+	return nil, sdk.ErrInternal(sdk.AppendMsgToErr("Not implemented", errRes.Error()))
+	// delegations := k.GetValidatorDelegations(ctx, params.ValidatorAddr)
+	//
+	// res, errRes = codec.MarshalJSONIndent(cdc, delegations)
+	// if errRes != nil {
+	// 	return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", errRes.Error()))
+	// }
+	// return res, nil
 }
 
 func queryValidatorUnbondingDelegations(ctx sdk.Context, cdc *codec.Codec, req abci.RequestQuery, k keep.Keeper) (res []byte, err sdk.Error) {

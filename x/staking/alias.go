@@ -173,6 +173,8 @@ var (
 	ErrMinSelfDelegationInvalid   = types.ErrMinSelfDelegationInvalid
 	ErrMinSelfDelegationDecreased = types.ErrMinSelfDelegationDecreased
 	ErrSelfDelegationBelowMinimum = types.ErrSelfDelegationBelowMinimum
+
+	ErrDenomPrefixInvalid = types.ErrDenomPrefixInvalid
 )
 
 var (

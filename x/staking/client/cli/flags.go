@@ -26,10 +26,10 @@ const (
 	FlagCommissionMaxChangeRate = "commission-max-change-rate"
 
 	FlagMinSelfDelegation = "min-self-delegation"
-
-	FlagGenesisFormat = "genesis-format"
-	FlagNodeID        = "node-id"
-	FlagIP            = "ip"
+	FlagSharesDenomPrefix = "shares-denom-prefix"
+	FlagGenesisFormat     = "genesis-format"
+	FlagNodeID            = "node-id"
+	FlagIP                = "ip"
 )
 
 // common flagsets to add to various functions
