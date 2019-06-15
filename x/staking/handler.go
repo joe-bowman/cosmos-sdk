@@ -229,9 +229,11 @@ func handleMsgDelegate(ctx sdk.Context, msg types.MsgDelegate, k keeper.Keeper) 
 }
 
 func handleMsgUndelegate(ctx sdk.Context, msg types.MsgUndelegate, k keeper.Keeper) sdk.Result {
+
 	shares, err := k.ValidateUnbondAmount(
 		ctx, msg.DelegatorAddress, msg.ValidatorAddress, msg.Amount.Amount,
 	)
+
 	if err != nil {
 		return err.Result()
 	}

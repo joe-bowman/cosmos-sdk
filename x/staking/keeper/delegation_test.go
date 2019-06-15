@@ -178,6 +178,7 @@ func TestUnbondDelegation(t *testing.T) {
 	//create a validator and a delegator to that validator
 	validator := types.NewValidator(addrVals[0], PKs[0], types.Description{}, "ONE")
 	validator, pool, issuedShares := validator.AddTokensFromDel(pool, startTokens)
+
 	require.Equal(t, startTokens, issuedShares.RoundInt())
 	keeper.SetPool(ctx, pool)
 	validator = TestingUpdateValidator(keeper, ctx, validator, true)
@@ -186,22 +187,26 @@ func TestUnbondDelegation(t *testing.T) {
 	require.Equal(t, startTokens, pool.BondedTokens)
 	require.Equal(t, startTokens, validator.BondedTokens())
 
-	delegation := types.NewDelegation(addrDels[0], addrVals[0], issuedShares)
-	keeper.SetDelegation(ctx, delegation)
+	keeper.bankKeeper.AddCoins(ctx, addrDels[0], sdk.NewCoins(sdk.NewCoin("onestake", issuedShares.RoundInt())))
+	//delegation := types.NewDelegation(addrDels[0], addrVals[0], issuedShares)
+	//keeper.Delegate(ctx, addrDels[0], issuedShares.RoundInt(), validator, true)
+	//keeper.SetDelegation(ctx, delegation)
 
 	bondTokens := sdk.TokensFromTendermintPower(6)
 	amount, err := keeper.unbond(ctx, addrDels[0], addrVals[0], bondTokens.ToDec())
 	require.NoError(t, err)
 	require.Equal(t, bondTokens, amount) // shares to be added to an unbonding delegation
 
-	delegation, found := keeper.GetDelegation(ctx, addrDels[0], addrVals[0])
-	require.True(t, found)
-	validator, found = keeper.GetValidator(ctx, addrVals[0])
-	require.True(t, found)
+	//delegation, found := keeper.GetDelegation(ctx, addrDels[0], addrVals[0])
+	//require.True(t, found)
+	//validator, found = keeper.GetValidator(ctx, addrVals[0])
+	//require.True(t, found)
 	pool = keeper.GetPool(ctx)
 
 	remainingTokens := startTokens.Sub(bondTokens)
-	require.Equal(t, remainingTokens, delegation.Shares.RoundInt())
+	require.True(t, keeper.bankKeeper.HasCoins(ctx, addrDels[0], sdk.NewCoins(sdk.NewCoin("onestake", remainingTokens))))
+	fmt.Printf("Remaining: %s\n", remainingTokens.String())
+	fmt.Printf("Bonded: %s\n", validator.BondedTokens().String())
 	require.Equal(t, remainingTokens, validator.BondedTokens())
 	require.Equal(t, bondTokens, pool.NotBondedTokens, "%v", pool)
 	require.Equal(t, remainingTokens, pool.BondedTokens)

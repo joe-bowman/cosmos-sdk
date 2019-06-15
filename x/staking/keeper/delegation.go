@@ -489,9 +489,19 @@ func (k Keeper) Delegate(ctx sdk.Context, delAddr sdk.AccAddress, bondAmt sdk.In
 func (k Keeper) unbond(ctx sdk.Context, delAddr sdk.AccAddress, valAddr sdk.ValAddress,
 	shares sdk.Dec) (amount sdk.Int, err sdk.Error) {
 
-	// check if a delegation object exists in the store
-	delegation, found := k.GetDelegation(ctx, delAddr, valAddr)
+	// get validator
+	validator, found := k.GetValidator(ctx, valAddr)
 	if !found {
+		return amount, types.ErrNoValidatorFound(k.Codespace())
+	}
+	sharesInt := shares.TruncateInt()
+	sharesDenomName := strings.ToLower(fmt.Sprintf("%s%s", validator.GetSharesDenomPrefix(), k.GetParams(ctx).BondDenom))
+
+	currentCoins := k.bankKeeper.GetCoins(ctx, delAddr)
+	fmt.Printf("%v", currentCoins)
+	currentShares := currentCoins.AmountOf(sharesDenomName)
+
+	if currentShares == sdk.ZeroInt() {
 		return amount, types.ErrNoDelegatorForAddress(k.Codespace())
 	}
 
@@ -499,42 +509,42 @@ func (k Keeper) unbond(ctx sdk.Context, delAddr sdk.AccAddress, valAddr sdk.ValA
 	k.BeforeDelegationSharesModified(ctx, delAddr, valAddr)
 
 	// ensure that we have enough shares to remove
-	if delegation.Shares.LT(shares) {
-		return amount, types.ErrNotEnoughDelegationShares(k.Codespace(), delegation.Shares.String())
+	fmt.Printf("Current Shares: %s\n", currentShares.String())
+	fmt.Printf("SharesInt: %s\n", sharesInt.String())
+
+	if currentShares.LT(sharesInt) {
+		return amount, types.ErrNotEnoughDelegationShares(k.Codespace(), shares.String())
 	}
 
-	// get validator
-	validator, found := k.GetValidator(ctx, valAddr)
-	if !found {
-		return amount, types.ErrNoValidatorFound(k.Codespace())
-	}
+	// remove share tokens from delegator's wallet.
+	k.bankKeeper.SubtractCoins(ctx, delAddr, sdk.NewCoins(sdk.NewCoin(sharesDenomName, sharesInt)))
 
-	// subtract shares from delegation
-	delegation.Shares = delegation.Shares.Sub(shares)
-
-	isValidatorOperator := bytes.Equal(delegation.DelegatorAddress, validator.OperatorAddress)
+	isValidatorOperator := bytes.Equal(delAddr, validator.OperatorAddress)
 
 	// if the delegation is the operator of the validator and undelegating will decrease the validator's self delegation below their minimum
 	// trigger a jail validator
 	if isValidatorOperator && !validator.Jailed &&
-		validator.TokensFromShares(delegation.Shares).TruncateInt().LT(validator.MinSelfDelegation) {
+		currentShares.Sub(sharesInt).LT(validator.MinSelfDelegation) {
 
 		k.jailValidator(ctx, validator)
 		validator = k.mustGetValidator(ctx, validator.OperatorAddress)
 	}
 
 	// remove the delegation
-	if delegation.Shares.IsZero() {
-		k.RemoveDelegation(ctx, delegation)
-	} else {
-		k.SetDelegation(ctx, delegation)
-		// call the after delegation modification hook
-		k.AfterDelegationModified(ctx, delegation.DelegatorAddress, delegation.ValidatorAddress)
-	}
-
+	//if delegation.Shares.IsZero() {
+	//	k.RemoveDelegation(ctx, delegation)
+	//} else {
+	//	k.SetDelegation(ctx, delegation)
+	// call the after delegation modification hook
+	// d we need to still call these hooks???
+	k.AfterDelegationModified(ctx, delAddr, valAddr)
+	//}
+	unbondAmt := shares.Mul(validator.GetSharesConversionRate())
 	// remove the shares and coins from the validator
-	validator, amount = k.RemoveValidatorTokensAndShares(ctx, validator, shares)
-
+	fmt.Printf("Unbond Amnt: %s", unbondAmt.String())
+	validator, amount = k.RemoveValidatorTokensAndShares(ctx, validator, unbondAmt)
+	fmt.Printf("Amnt: %s", amount.String())
+	k.SetValidator(ctx, validator)
 	if validator.DelegatorShares.IsZero() && validator.Status == sdk.Unbonded {
 		// if not unbonded, we must instead remove validator in EndBlocker once it finishes its unbonding period
 		k.RemoveValidator(ctx, validator.OperatorAddress)
