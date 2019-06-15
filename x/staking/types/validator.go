@@ -17,10 +17,11 @@ import (
 // nolint
 const (
 	// TODO: Why can't we just have one string description which can be JSON by convention
-	MaxMonikerLength  = 70
-	MaxIdentityLength = 3000
-	MaxWebsiteLength  = 140
-	MaxDetailsLength  = 280
+	MaxMonikerLength     = 70
+	MaxIdentityLength    = 3000
+	MaxWebsiteLength     = 140
+	MaxDetailsLength     = 280
+	MaxSharesDenomPrefix = 6
 )
 
 // Validator defines the total amount of bond shares and their exchange rate to
@@ -42,6 +43,7 @@ type Validator struct {
 	UnbondingCompletionTime time.Time      `json:"unbonding_time"`      // if unbonding, min time for the validator to complete unbonding
 	Commission              Commission     `json:"commission"`          // commission parameters
 	MinSelfDelegation       sdk.Int        `json:"min_self_delegation"` // validator's self declared minimum self delegation
+	SharesDenomPrefix       string         `json:"shares_denom_prefix"` // chain unique prefix for a validator's shares token
 }
 
 // Validators is a collection of Validator
@@ -63,7 +65,8 @@ func (v Validators) ToSDKValidators() (validators []sdk.Validator) {
 }
 
 // NewValidator - initialize a new validator
-func NewValidator(operator sdk.ValAddress, pubKey crypto.PubKey, description Description) Validator {
+func NewValidator(operator sdk.ValAddress, pubKey crypto.PubKey, description Description, denomPrefix string) Validator {
+	// XXXX we need to validate SharesDenomPrefix is chain unique.
 	return Validator{
 		OperatorAddress:         operator,
 		ConsPubKey:              pubKey,
@@ -76,6 +79,7 @@ func NewValidator(operator sdk.ValAddress, pubKey crypto.PubKey, description Des
 		UnbondingCompletionTime: time.Unix(0, 0).UTC(),
 		Commission:              NewCommission(sdk.ZeroDec(), sdk.ZeroDec(), sdk.ZeroDec()),
 		MinSelfDelegation:       sdk.OneInt(),
+		SharesDenomPrefix:       denomPrefix,
 	}
 }
 
@@ -116,10 +120,11 @@ func (v Validator) String() string {
   Unbonding Height:           %d
   Unbonding Completion Time:  %v
   Minimum Self Delegation:    %v
-  Commission:                 %s`, v.OperatorAddress, bechConsPubKey,
+  Commission:                 %s
+  Shares Prefix:              %s`, v.OperatorAddress, bechConsPubKey,
 		v.Jailed, v.Status, v.Tokens,
 		v.DelegatorShares, v.Description,
-		v.UnbondingHeight, v.UnbondingCompletionTime, v.MinSelfDelegation, v.Commission)
+		v.UnbondingHeight, v.UnbondingCompletionTime, v.MinSelfDelegation, v.Commission, v.SharesDenomPrefix)
 }
 
 // this is a helper struct used for JSON de- and encoding only
@@ -135,6 +140,7 @@ type bechValidator struct {
 	UnbondingCompletionTime time.Time      `json:"unbonding_time"`      // if unbonding, min time for the validator to complete unbonding
 	Commission              Commission     `json:"commission"`          // commission parameters
 	MinSelfDelegation       sdk.Int        `json:"min_self_delegation"` // minimum self delegation
+	SharesDenomPrefix       string         `json:"shares_denom_prefix"` // chain unique prefix for a validator's shares token
 }
 
 // MarshalJSON marshals the validator to JSON using Bech32
@@ -156,6 +162,7 @@ func (v Validator) MarshalJSON() ([]byte, error) {
 		UnbondingCompletionTime: v.UnbondingCompletionTime,
 		MinSelfDelegation:       v.MinSelfDelegation,
 		Commission:              v.Commission,
+		SharesDenomPrefix:       v.SharesDenomPrefix,
 	})
 }
 
@@ -169,6 +176,8 @@ func (v *Validator) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
+	// XXXX validate denom prefix is chain unique.
+
 	*v = Validator{
 		OperatorAddress:         bv.OperatorAddress,
 		ConsPubKey:              consPubKey,
@@ -181,6 +190,7 @@ func (v *Validator) UnmarshalJSON(data []byte) error {
 		UnbondingCompletionTime: bv.UnbondingCompletionTime,
 		Commission:              bv.Commission,
 		MinSelfDelegation:       bv.MinSelfDelegation,
+		SharesDenomPrefix:       bv.SharesDenomPrefix,
 	}
 	return nil
 }
@@ -193,7 +203,8 @@ func (v Validator) TestEquivalent(v2 Validator) bool {
 		v.Tokens.Equal(v2.Tokens) &&
 		v.DelegatorShares.Equal(v2.DelegatorShares) &&
 		v.Description == v2.Description &&
-		v.Commission.Equal(v2.Commission)
+		v.Commission.Equal(v2.Commission) &&
+		(v.SharesDenomPrefix == v2.SharesDenomPrefix)
 }
 
 // return the TM validator address
@@ -485,3 +496,4 @@ func (v Validator) GetTendermintPower() int64     { return v.TendermintPower() }
 func (v Validator) GetCommission() sdk.Dec        { return v.Commission.Rate }
 func (v Validator) GetMinSelfDelegation() sdk.Int { return v.MinSelfDelegation }
 func (v Validator) GetDelegatorShares() sdk.Dec   { return v.DelegatorShares }
+func (v Validator) GetSharesDenomPrefix() string  { return v.SharesDenomPrefix }
