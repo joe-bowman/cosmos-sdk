@@ -40,6 +40,9 @@ type Delegation struct {
 func NewDelegation(delegatorAddr sdk.AccAddress, validatorAddr sdk.ValAddress,
 	shares sdk.Dec) Delegation {
 
+	// mint validatorToken
+	// keep reference to validatorTokens within validator, such that we can do a reverse lookup (to support queries like /validators/{addr}/delegatiosn endpoint)
+
 	return Delegation{
 		DelegatorAddress: delegatorAddr,
 		ValidatorAddress: validatorAddr,

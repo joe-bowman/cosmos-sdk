@@ -25,7 +25,7 @@ func TestSetValidator(t *testing.T) {
 	valTokens := sdk.TokensFromTendermintPower(10)
 
 	// test how the validator is set from a purely unbonbed pool
-	validator := types.NewValidator(valAddr, valPubKey, types.Description{})
+	validator := types.NewValidator(valAddr, valPubKey, types.Description{}, "ONE")
 	validator, pool, _ = validator.AddTokensFromDel(pool, valTokens)
 	require.Equal(t, sdk.Unbonded, validator.Status)
 	assert.Equal(t, valTokens, validator.Tokens)
@@ -81,7 +81,7 @@ func TestUpdateValidatorByPowerIndex(t *testing.T) {
 	keeper.SetPool(ctx, pool)
 
 	// add a validator
-	validator := types.NewValidator(addrVals[0], PKs[0], types.Description{})
+	validator := types.NewValidator(addrVals[0], PKs[0], types.Description{}, "ONE")
 	validator, pool, delSharesCreated := validator.AddTokensFromDel(pool, sdk.NewInt(100))
 	require.Equal(t, sdk.Unbonded, validator.Status)
 	require.Equal(t, int64(100), validator.Tokens.Int64())
@@ -131,7 +131,7 @@ func TestUpdateBondedValidatorsDecreaseCliff(t *testing.T) {
 	validators := make([]types.Validator, numVals)
 	for i := 0; i < len(validators); i++ {
 		moniker := fmt.Sprintf("val#%d", int64(i))
-		val := types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{Moniker: moniker})
+		val := types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{Moniker: moniker}, fmt.Sprintf("DEN%i", i))
 		delTokens := sdk.TokensFromTendermintPower(int64((i + 1) * 10))
 		val, pool, _ = val.AddTokensFromDel(pool, delTokens)
 
@@ -173,7 +173,7 @@ func TestSlashToZeroPowerRemoved(t *testing.T) {
 	pool := keeper.GetPool(ctx)
 
 	// add a validator
-	validator := types.NewValidator(addrVals[0], PKs[0], types.Description{})
+	validator := types.NewValidator(addrVals[0], PKs[0], types.Description{}, "ONE")
 	valTokens := sdk.TokensFromTendermintPower(100)
 	validator, pool, _ = validator.AddTokensFromDel(pool, valTokens)
 	require.Equal(t, sdk.Unbonded, validator.Status)
@@ -202,7 +202,7 @@ func TestValidatorBasics(t *testing.T) {
 	var validators [3]types.Validator
 	powers := []int64{9, 8, 7}
 	for i, power := range powers {
-		validators[i] = types.NewValidator(addrVals[i], PKs[i], types.Description{})
+		validators[i] = types.NewValidator(addrVals[i], PKs[i], types.Description{}, fmt.Sprintf("DEN%i", i))
 		validators[i].Status = sdk.Unbonded
 		validators[i].Tokens = sdk.ZeroInt()
 		tokens := sdk.TokensFromTendermintPower(power)
@@ -308,7 +308,7 @@ func GetValidatorSortingUnmixed(t *testing.T) {
 	n := len(amts)
 	var validators [5]types.Validator
 	for i, amt := range amts {
-		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{})
+		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{}, fmt.Sprintf("DEN%i", i))
 		validators[i].Status = sdk.Bonded
 		validators[i].Tokens = sdk.NewInt(amt)
 		validators[i].DelegatorShares = sdk.NewDec(amt)
@@ -389,7 +389,7 @@ func GetValidatorSortingMixed(t *testing.T) {
 	n := len(amts)
 	var validators [5]types.Validator
 	for i, amt := range amts {
-		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{})
+		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{}, fmt.Sprintf("DEN%i", i))
 		validators[i].DelegatorShares = sdk.NewDec(amt)
 	}
 
@@ -456,7 +456,7 @@ func TestGetValidatorsEdgeCases(t *testing.T) {
 	for i, power := range powers {
 		pool := keeper.GetPool(ctx)
 		moniker := fmt.Sprintf("val#%d", int64(i))
-		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{Moniker: moniker})
+		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{Moniker: moniker}, fmt.Sprintf("DEN%i", i))
 		tokens := sdk.TokensFromTendermintPower(power)
 		validators[i], pool, _ = validators[i].AddTokensFromDel(pool, tokens)
 		keeper.SetPool(ctx, pool)
@@ -535,9 +535,9 @@ func TestValidatorBondHeight(t *testing.T) {
 
 	// initialize some validators into the state
 	var validators [3]types.Validator
-	validators[0] = types.NewValidator(sdk.ValAddress(Addrs[0]), PKs[0], types.Description{})
-	validators[1] = types.NewValidator(sdk.ValAddress(Addrs[1]), PKs[1], types.Description{})
-	validators[2] = types.NewValidator(sdk.ValAddress(Addrs[2]), PKs[2], types.Description{})
+	validators[0] = types.NewValidator(sdk.ValAddress(Addrs[0]), PKs[0], types.Description{}, "ONE")
+	validators[1] = types.NewValidator(sdk.ValAddress(Addrs[1]), PKs[1], types.Description{}, "TWO")
+	validators[2] = types.NewValidator(sdk.ValAddress(Addrs[2]), PKs[2], types.Description{}, "THREE")
 
 	tokens0 := sdk.TokensFromTendermintPower(200)
 	tokens1 := sdk.TokensFromTendermintPower(100)
@@ -588,7 +588,7 @@ func TestFullValidatorSetPowerChange(t *testing.T) {
 	var validators [5]types.Validator
 	for i, power := range powers {
 		pool := keeper.GetPool(ctx)
-		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{})
+		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{}, fmt.Sprintf("DEN%i", i))
 		tokens := sdk.TokensFromTendermintPower(power)
 		validators[i], pool, _ = validators[i].AddTokensFromDel(pool, tokens)
 		keeper.SetPool(ctx, pool)
@@ -632,7 +632,7 @@ func TestApplyAndReturnValidatorSetUpdatesAllNone(t *testing.T) {
 		valPubKey := PKs[i+1]
 		valAddr := sdk.ValAddress(valPubKey.Address().Bytes())
 
-		validators[i] = types.NewValidator(valAddr, valPubKey, types.Description{})
+		validators[i] = types.NewValidator(valAddr, valPubKey, types.Description{}, fmt.Sprintf("DEN%i", i))
 		tokens := sdk.TokensFromTendermintPower(power)
 		validators[i], pool, _ = validators[i].AddTokensFromDel(pool, tokens)
 		keeper.SetPool(ctx, pool)
@@ -661,7 +661,7 @@ func TestApplyAndReturnValidatorSetUpdatesIdentical(t *testing.T) {
 	var validators [2]types.Validator
 	for i, power := range powers {
 		pool := keeper.GetPool(ctx)
-		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{})
+		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{}, fmt.Sprintf("DEN%i", i))
 
 		tokens := sdk.TokensFromTendermintPower(power)
 		validators[i], pool, _ = validators[i].AddTokensFromDel(pool, tokens)
@@ -685,7 +685,7 @@ func TestApplyAndReturnValidatorSetUpdatesSingleValueChange(t *testing.T) {
 	var validators [2]types.Validator
 	for i, power := range powers {
 		pool := keeper.GetPool(ctx)
-		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{})
+		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{}, fmt.Sprintf("DEN%i", i))
 
 		tokens := sdk.TokensFromTendermintPower(power)
 		validators[i], pool, _ = validators[i].AddTokensFromDel(pool, tokens)
@@ -714,7 +714,7 @@ func TestApplyAndReturnValidatorSetUpdatesMultipleValueChange(t *testing.T) {
 	var validators [2]types.Validator
 	for i, power := range powers {
 		pool := keeper.GetPool(ctx)
-		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{})
+		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{}, fmt.Sprintf("DEN%i", i))
 
 		tokens := sdk.TokensFromTendermintPower(power)
 		validators[i], pool, _ = validators[i].AddTokensFromDel(pool, tokens)
@@ -748,7 +748,7 @@ func TestApplyAndReturnValidatorSetUpdatesInserted(t *testing.T) {
 	var validators [5]types.Validator
 	for i, power := range powers {
 		pool := keeper.GetPool(ctx)
-		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{})
+		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{}, fmt.Sprintf("DEN%i", i))
 
 		tokens := sdk.TokensFromTendermintPower(power)
 		validators[i], pool, _ = validators[i].AddTokensFromDel(pool, tokens)
@@ -797,7 +797,7 @@ func TestApplyAndReturnValidatorSetUpdatesWithCliffValidator(t *testing.T) {
 	var validators [5]types.Validator
 	for i, power := range powers {
 		pool := keeper.GetPool(ctx)
-		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{})
+		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{}, fmt.Sprintf("DEN%i", i))
 
 		tokens := sdk.TokensFromTendermintPower(power)
 		validators[i], pool, _ = validators[i].AddTokensFromDel(pool, tokens)
@@ -837,7 +837,7 @@ func TestApplyAndReturnValidatorSetUpdatesPowerDecrease(t *testing.T) {
 	var validators [2]types.Validator
 	for i, power := range powers {
 		pool := keeper.GetPool(ctx)
-		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{})
+		validators[i] = types.NewValidator(sdk.ValAddress(Addrs[i]), PKs[i], types.Description{}, fmt.Sprintf("DEN%i", i))
 
 		tokens := sdk.TokensFromTendermintPower(power)
 		validators[i], pool, _ = validators[i].AddTokensFromDel(pool, tokens)
@@ -889,7 +889,7 @@ func TestApplyAndReturnValidatorSetUpdatesNewValidator(t *testing.T) {
 		valPubKey := PKs[i+1]
 		valAddr := sdk.ValAddress(valPubKey.Address().Bytes())
 
-		validators[i] = types.NewValidator(valAddr, valPubKey, types.Description{})
+		validators[i] = types.NewValidator(valAddr, valPubKey, types.Description{}, fmt.Sprintf("DEN%i", i))
 		tokens := sdk.TokensFromTendermintPower(power)
 		validators[i], pool, _ = validators[i].AddTokensFromDel(pool, tokens)
 
@@ -927,7 +927,7 @@ func TestApplyAndReturnValidatorSetUpdatesNewValidator(t *testing.T) {
 	valAddr := sdk.ValAddress(valPubKey.Address().Bytes())
 	amt := sdk.NewInt(100)
 
-	validator := types.NewValidator(valAddr, valPubKey, types.Description{})
+	validator := types.NewValidator(valAddr, valPubKey, types.Description{}, "ONE")
 	validator, pool, _ = validator.AddTokensFromDel(pool, amt)
 
 	keeper.SetPool(ctx, pool)
@@ -941,7 +941,7 @@ func TestApplyAndReturnValidatorSetUpdatesNewValidator(t *testing.T) {
 	valPubKey = PKs[len(validators)+2]
 	valAddr = sdk.ValAddress(valPubKey.Address().Bytes())
 
-	validator = types.NewValidator(valAddr, valPubKey, types.Description{})
+	validator = types.NewValidator(valAddr, valPubKey, types.Description{}, "TWO")
 	tokens := sdk.TokensFromTendermintPower(500)
 	validator, pool, _ = validator.AddTokensFromDel(pool, tokens)
 	keeper.SetValidator(ctx, validator)
@@ -976,7 +976,7 @@ func TestApplyAndReturnValidatorSetUpdatesBondTransition(t *testing.T) {
 		valPubKey := PKs[i+1]
 		valAddr := sdk.ValAddress(valPubKey.Address().Bytes())
 
-		validators[i] = types.NewValidator(valAddr, valPubKey, types.Description{Moniker: moniker})
+		validators[i] = types.NewValidator(valAddr, valPubKey, types.Description{Moniker: moniker}, fmt.Sprintf("DEN%i", i))
 		tokens := sdk.TokensFromTendermintPower(power)
 		validators[i], pool, _ = validators[i].AddTokensFromDel(pool, tokens)
 		keeper.SetPool(ctx, pool)
@@ -1053,8 +1053,8 @@ func TestUpdateValidatorCommission(t *testing.T) {
 	)
 	commission2 := types.NewCommission(sdk.NewDecWithPrec(1, 1), sdk.NewDecWithPrec(3, 1), sdk.NewDecWithPrec(1, 1))
 
-	val1 := types.NewValidator(addrVals[0], PKs[0], types.Description{})
-	val2 := types.NewValidator(addrVals[1], PKs[1], types.Description{})
+	val1 := types.NewValidator(addrVals[0], PKs[0], types.Description{}, "ONE")
+	val2 := types.NewValidator(addrVals[1], PKs[1], types.Description{}, "TWO")
 
 	val1, _ = val1.SetInitialCommission(commission1)
 	val2, _ = val2.SetInitialCommission(commission2)
