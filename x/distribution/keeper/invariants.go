@@ -77,29 +77,28 @@ func CanWithdrawInvariant(k Keeper, sk types.StakingKeeper) sdk.Invariant {
 		// iterate over all validators
 		sk.IterateValidators(ctx, func(_ int64, val sdk.Validator) (stop bool) {
 			_, _ = k.WithdrawValidatorCommission(ctx, val.GetOperator())
-
-			delegationAddrs, ok := valDelegationAddrs[val.GetOperator().String()]
-			if ok {
-				for _, delAddr := range delegationAddrs {
-					if _, err := k.WithdrawDelegationRewards(ctx, delAddr, val.GetOperator()); err != nil {
-						panic(err)
-					}
-				}
-			}
-
-			remaining = k.GetValidatorOutstandingRewards(ctx, val.GetOperator())
-			if len(remaining) > 0 && remaining[0].Amount.LT(sdk.ZeroDec()) {
-				return true
-			}
-
 			return false
+			//delegationAddrs, ok := valDelegationAddrs[val.GetOperator().String()]
+			//if ok {
+			//	for _, delAddr := range delegationAddrs {
+			//		if _, err := k.WithdrawDelegationRewards(ctx, delAddr, val.GetOperator()); err != nil {
+			//			panic(err)
+			//		}
+			//	}
+			//}
+
+			//remaining = k.GetValidatorOutstandingRewards(ctx, val.GetOperator())
+			//if len(remaining) > 0 && remaining[0].Amount.LT(sdk.ZeroDec()) {
+			//	return true
+			//}
+
 		})
 
-		if len(remaining) > 0 && remaining[0].Amount.LT(sdk.ZeroDec()) {
-			return fmt.Errorf("negative remaining coins: %v", remaining)
-		}
+		//if len(remaining) > 0 && remaining[0].Amount.LT(sdk.ZeroDec()) {
+		//	return fmt.Errorf("negative remaining coins: %v", remaining)
+		//}
 
-		return nil
+		//return nil
 	}
 }
 

@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -81,6 +82,10 @@ func NewValidator(operator sdk.ValAddress, pubKey crypto.PubKey, description Des
 		MinSelfDelegation:       sdk.OneInt(),
 		SharesDenomPrefix:       denomPrefix,
 	}
+}
+
+func ValidatorFromSdkValidator(sdkValidator sdk.Validator) Validator {
+	return reflect.ValueOf(sdkValidator).Interface().(Validator)
 }
 
 // return the redelegation

@@ -6,6 +6,7 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	staking "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
 // allocate fees handles distribution of the collected fees
@@ -85,6 +86,7 @@ func (k Keeper) AllocateTokens(ctx sdk.Context, sumPreviousPrecommitPower, total
 // allocate tokens to a particular validator, splitting according to commission
 func (k Keeper) AllocateTokensToValidator(ctx sdk.Context, val sdk.Validator, tokens sdk.DecCoins) {
 
+	// handle commission properly, then bond everything to the requisite validator!
 	// split tokens between validator and delegators according to commission
 	commission := tokens.MulDec(val.GetCommission())
 	shared := tokens.Sub(commission)
@@ -94,13 +96,12 @@ func (k Keeper) AllocateTokensToValidator(ctx sdk.Context, val sdk.Validator, to
 	currentCommission = currentCommission.Add(commission)
 	k.SetValidatorAccumulatedCommission(ctx, val.GetOperator(), currentCommission)
 
-	// update current rewards
-	currentRewards := k.GetValidatorCurrentRewards(ctx, val.GetOperator())
-	currentRewards.Rewards = currentRewards.Rewards.Add(shared)
-	k.SetValidatorCurrentRewards(ctx, val.GetOperator(), currentRewards)
+	if str, ok := val.(staking.Validator); ok {
+		// huge massive caveat; at this point in time, we ignore any non baseDenom tokens.
+		// TODO: don't do this, it sucks.
+		k.stakingKeeper.AddValidatorTokensAndShares(ctx, staking.ValidatorFromSdkValidator(val), shared.AmountOf(k.stakingKeeper.GetParams(ctx).BondDenom).TruncateInt())
+	} else {
+		fmt.Println("Well this is shit...")
+	}
 
-	// update outstanding rewards
-	outstanding := k.GetValidatorOutstandingRewards(ctx, val.GetOperator())
-	outstanding = outstanding.Add(tokens)
-	k.SetValidatorOutstandingRewards(ctx, val.GetOperator(), outstanding)
 }
