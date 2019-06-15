@@ -704,12 +704,18 @@ func (k Keeper) CompleteRedelegation(ctx sdk.Context, delAddr sdk.AccAddress,
 		return types.ErrNoRedelegation(k.Codespace())
 	}
 
+	dstVal, _ := k.GetValidator(ctx, valDstAddr)
+	sharesDenomName := strings.ToLower(fmt.Sprintf("%s%s", dstVal.GetSharesDenomPrefix(), k.GetParams(ctx).BondDenom))
 	ctxTime := ctx.BlockHeader().Time
 
 	// loop through all the entries and complete mature redelegation entries
 	for i := 0; i < len(red.Entries); i++ {
 		entry := red.Entries[i]
 		if entry.IsMature(ctxTime) {
+			/** Pay derivative tokens to redelegator, as these have unlocked. */
+			/** TODO: add red.Entries[i].SharesDst to actual atom amount */
+			amtOfDerivative := dstVal.GetSharesConversionRate().Mul(red.Entries[i].SharesDst).TruncateInt()
+			k.bankKeeper.AddCoins(ctx, delAddr, sdk.NewCoins(sdk.NewCoin(sharesDenomName, amtOfDerivative)))
 			red.RemoveEntry(int64(i))
 			i--
 		}

@@ -301,46 +301,6 @@ func (msg MsgBeginRedelegate) ValidateBasic() sdk.Error {
 	return nil
 }
 
-// MsgUnlockRedelegation - struct for unlocking all redelegations from one validator
-//
-type MsgUnlockRedelegation struct {
-	DelegatorAddress    sdk.AccAddress `json:"delegator_address"`
-	ValidatorDstAddress sdk.ValAddress `json:"validator_dst_address"`
-}
-
-func NewMsgUnlockRedelegation(delAddr sdk.AccAddress,
-	valDstAddr sdk.ValAddress) MsgUnlockRedelegation {
-
-	return MsgUnlockRedelegation{
-		DelegatorAddress:    delAddr,
-		ValidatorDstAddress: valDstAddr,
-	}
-}
-
-//nolint
-func (msg MsgUnlockRedelegation) Route() string { return RouterKey }
-func (msg MsgUnlockRedelegation) Type() string  { return "unlock_redelegate" }
-func (msg MsgUnlockRedelegation) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{msg.DelegatorAddress}
-}
-
-// get the bytes for the message signer to sign on
-func (msg MsgUnlockRedelegation) GetSignBytes() []byte {
-	bz := MsgCdc.MustMarshalJSON(msg)
-	return sdk.MustSortJSON(bz)
-}
-
-// quick validity check
-func (msg MsgUnlockRedelegation) ValidateBasic() sdk.Error {
-	if msg.DelegatorAddress.Empty() {
-		return ErrNilDelegatorAddr(DefaultCodespace)
-	}
-	if msg.ValidatorDstAddress.Empty() {
-		return ErrNilValidatorAddr(DefaultCodespace)
-	}
-	return nil
-}
-
 // MsgUndelegate - struct for unbonding transactions
 type MsgUndelegate struct {
 	DelegatorAddress sdk.AccAddress `json:"delegator_address"`
