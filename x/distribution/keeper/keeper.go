@@ -37,6 +37,7 @@ func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, paramSpace params.Subspace, c
 
 // set withdraw address
 func (k Keeper) SetWithdrawAddr(ctx sdk.Context, delegatorAddr sdk.AccAddress, withdrawAddr sdk.AccAddress) sdk.Error {
+	// TODO: Check here to ensure 'delegatorAddr' (rename this!!) is a valid validator!
 	if !k.GetWithdrawAddrEnabled(ctx) {
 		return types.ErrSetWithdrawAddrDisabled(k.codespace)
 	}
@@ -46,29 +47,29 @@ func (k Keeper) SetWithdrawAddr(ctx sdk.Context, delegatorAddr sdk.AccAddress, w
 	return nil
 }
 
-// withdraw rewards from a delegation
-func (k Keeper) WithdrawDelegationRewards(ctx sdk.Context, delAddr sdk.AccAddress, valAddr sdk.ValAddress) (sdk.Coins, sdk.Error) {
-	val := k.stakingKeeper.Validator(ctx, valAddr)
-	if val == nil {
-		return nil, types.ErrNoValidatorDistInfo(k.codespace)
-	}
-
-	del := k.stakingKeeper.Delegation(ctx, delAddr, valAddr)
-	if del == nil {
-		return nil, types.ErrNoDelegationDistInfo(k.codespace)
-	}
-
-	// withdraw rewards
-	rewards, err := k.withdrawDelegationRewards(ctx, val, del)
-	if err != nil {
-		return nil, err
-	}
-
-	// reinitialize the delegation
-	k.initializeDelegation(ctx, valAddr, delAddr)
-
-	return rewards, nil
-}
+// // withdraw rewards from a delegation
+// func (k Keeper) WithdrawDelegationRewards(ctx sdk.Context, delAddr sdk.AccAddress, valAddr sdk.ValAddress) (sdk.Coins, sdk.Error) {
+// 	val := k.stakingKeeper.Validator(ctx, valAddr)
+// 	if val == nil {
+// 		return nil, types.ErrNoValidatorDistInfo(k.codespace)
+// 	}
+//
+// 	del := k.stakingKeeper.Delegation(ctx, delAddr, valAddr)
+// 	if del == nil {
+// 		return nil, types.ErrNoDelegationDistInfo(k.codespace)
+// 	}
+//
+// 	// withdraw rewards
+// 	rewards, err := k.withdrawDelegationRewards(ctx, val, del)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	// reinitialize the delegation
+// 	k.initializeDelegation(ctx, valAddr, delAddr)
+//
+// 	return rewards, nil
+// }
 
 // withdraw validator commission
 func (k Keeper) WithdrawValidatorCommission(ctx sdk.Context, valAddr sdk.ValAddress) (sdk.Coins, sdk.Error) {

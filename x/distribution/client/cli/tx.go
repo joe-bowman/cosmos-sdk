@@ -15,7 +15,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtxb "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
 
-	"github.com/cosmos/cosmos-sdk/x/distribution/client/common"
 	"github.com/cosmos/cosmos-sdk/x/distribution/types"
 )
 
@@ -79,16 +78,15 @@ func splitAndApply(
 }
 
 // command to withdraw rewards
-func GetCmdWithdrawRewards(cdc *codec.Codec) *cobra.Command {
+func GetCmdWithdrawCommission(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "withdraw-rewards [validator-addr]",
-		Short: "witdraw rewards from a given delegation address, and optionally withdraw validator commission if the delegation address given is a validator operator",
-		Long: strings.TrimSpace(`witdraw rewards from a given delegation address, and optionally withdraw validator commission if the delegation address given is a validator operator:
+		Use:   "withdraw-commission",
+		Short: "withdraw validators comission for the given validator",
+		Long: strings.TrimSpace(`withdraw validators comission for the given validator:
 
-$ gaiacli tx distr withdraw-rewards cosmosvaloper1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj --from mykey
-$ gaiacli tx distr withdraw-rewards cosmosvaloper1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj --from mykey --commission
+$ gaiacli tx distr withdraw-commission --from mykey
 `),
-		Args: cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txBldr := authtxb.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			cliCtx := context.NewCLIContext().
@@ -96,15 +94,12 @@ $ gaiacli tx distr withdraw-rewards cosmosvaloper1gghjut3ccd8ay0zduzj64hwre2fxs9
 				WithAccountDecoder(cdc)
 
 			delAddr := cliCtx.GetFromAddress()
-			valAddr, err := sdk.ValAddressFromBech32(args[0])
+			valAddr, err := sdk.ValAddress(delAddr.bytes())
 			if err != nil {
 				return err
 			}
 
-			msgs := []sdk.Msg{types.NewMsgWithdrawDelegatorReward(delAddr, valAddr)}
-			if viper.GetBool(flagComission) {
-				msgs = append(msgs, types.NewMsgWithdrawValidatorCommission(valAddr))
-			}
+			msgs := []sdk.Msg{types.NewMsgWithdrawValidatorCommission(valAddr))
 
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, msgs, false)
 		},
@@ -114,36 +109,36 @@ $ gaiacli tx distr withdraw-rewards cosmosvaloper1gghjut3ccd8ay0zduzj64hwre2fxs9
 }
 
 // command to withdraw all rewards
-func GetCmdWithdrawAllRewards(cdc *codec.Codec, queryRoute string) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "withdraw-all-rewards",
-		Short: "withdraw all delegations rewards for a delegator",
-		Long: strings.TrimSpace(`Withdraw all rewards for a single delegator:
-
-$ gaiacli tx distr withdraw-all-rewards --from mykey
-`),
-		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-
-			txBldr := authtxb.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
-			cliCtx := context.NewCLIContext().
-				WithCodec(cdc).
-				WithAccountDecoder(cdc)
-
-			delAddr := cliCtx.GetFromAddress()
-			msgs, err := common.WithdrawAllDelegatorRewards(cliCtx, cdc, queryRoute, delAddr)
-			if err != nil {
-				return err
-			}
-
-			chunkSize := viper.GetInt(flagMaxMessagesPerTx)
-			return splitAndApply(utils.GenerateOrBroadcastMsgs, cliCtx, txBldr, msgs, chunkSize, false)
-		},
-	}
-
-	cmd.Flags().Int(flagMaxMessagesPerTx, MaxMessagesPerTxDefault, "Limit the number of messages per tx (0 for unlimited)")
-	return cmd
-}
+// func GetCmdWithdrawAllRewards(cdc *codec.Codec, queryRoute string) *cobra.Command {
+// 	cmd := &cobra.Command{
+// 		Use:   "withdraw-all-rewards",
+// 		Short: "withdraw all delegations rewards for a delegator",
+// 		Long: strings.TrimSpace(`Withdraw all rewards for a single delegator:
+//
+// $ gaiacli tx distr withdraw-all-rewards --from mykey
+// `),
+// 		Args: cobra.NoArgs,
+// 		RunE: func(cmd *cobra.Command, args []string) error {
+//
+// 			txBldr := authtxb.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
+// 			cliCtx := context.NewCLIContext().
+// 				WithCodec(cdc).
+// 				WithAccountDecoder(cdc)
+//
+// 			delAddr := cliCtx.GetFromAddress()
+// 			msgs, err := common.WithdrawAllDelegatorRewards(cliCtx, cdc, queryRoute, delAddr)
+// 			if err != nil {
+// 				return err
+// 			}
+//
+// 			chunkSize := viper.GetInt(flagMaxMessagesPerTx)
+// 			return splitAndApply(utils.GenerateOrBroadcastMsgs, cliCtx, txBldr, msgs, chunkSize, false)
+// 		},
+// 	}
+//
+// 	cmd.Flags().Int(flagMaxMessagesPerTx, MaxMessagesPerTxDefault, "Limit the number of messages per tx (0 for unlimited)")
+// 	return cmd
+// }
 
 // command to replace a delegator's withdrawal address
 func GetCmdSetWithdrawAddr(cdc *codec.Codec) *cobra.Command {

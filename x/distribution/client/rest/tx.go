@@ -19,16 +19,16 @@ func registerTxRoutes(cliCtx context.CLIContext, r *mux.Router,
 	cdc *codec.Codec, queryRoute string) {
 
 	// Withdraw all delegator rewards
-	r.HandleFunc(
-		"/distribution/delegators/{delegatorAddr}/rewards",
-		withdrawDelegatorRewardsHandlerFn(cdc, cliCtx, queryRoute),
-	).Methods("POST")
+	// r.HandleFunc(
+	// 	"/distribution/delegators/{delegatorAddr}/rewards",
+	// 	withdrawDelegatorRewardsHandlerFn(cdc, cliCtx, queryRoute),
+	// ).Methods("POST")
 
 	// Withdraw delegation rewards
-	r.HandleFunc(
-		"/distribution/delegators/{delegatorAddr}/rewards/{validatorAddr}",
-		withdrawDelegationRewardsHandlerFn(cdc, cliCtx),
-	).Methods("POST")
+	// r.HandleFunc(
+	// 	"/distribution/delegators/{delegatorAddr}/rewards/{validatorAddr}",
+	// 	withdrawDelegationRewardsHandlerFn(cdc, cliCtx),
+	// ).Methods("POST")
 
 	// Replace the rewards withdrawal address
 	r.HandleFunc(
@@ -56,71 +56,71 @@ type (
 )
 
 // Withdraw delegator rewards
-func withdrawDelegatorRewardsHandlerFn(
-	cdc *codec.Codec, cliCtx context.CLIContext, queryRoute string,
-) http.HandlerFunc {
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		var req withdrawRewardsReq
-		if !rest.ReadRESTReq(w, r, cdc, &req) {
-			return
-		}
-
-		req.BaseReq = req.BaseReq.Sanitize()
-		if !req.BaseReq.ValidateBasic(w) {
-			return
-		}
-
-		// read and validate URL's variables
-		delAddr, ok := checkDelegatorAddressVar(w, r)
-		if !ok {
-			return
-		}
-
-		msgs, err := common.WithdrawAllDelegatorRewards(cliCtx, cdc, queryRoute, delAddr)
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		clientrest.WriteGenerateStdTxResponse(w, cdc, cliCtx, req.BaseReq, msgs)
-	}
-}
+// func withdrawDelegatorRewardsHandlerFn(
+// 	cdc *codec.Codec, cliCtx context.CLIContext, queryRoute string,
+// ) http.HandlerFunc {
+//
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		var req withdrawRewardsReq
+// 		if !rest.ReadRESTReq(w, r, cdc, &req) {
+// 			return
+// 		}
+//
+// 		req.BaseReq = req.BaseReq.Sanitize()
+// 		if !req.BaseReq.ValidateBasic(w) {
+// 			return
+// 		}
+//
+// 		// read and validate URL's variables
+// 		delAddr, ok := checkDelegatorAddressVar(w, r)
+// 		if !ok {
+// 			return
+// 		}
+//
+// 		msgs, err := common.WithdrawAllDelegatorRewards(cliCtx, cdc, queryRoute, delAddr)
+// 		if err != nil {
+// 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+// 			return
+// 		}
+//
+// 		clientrest.WriteGenerateStdTxResponse(w, cdc, cliCtx, req.BaseReq, msgs)
+// 	}
+// }
 
 // Withdraw delegation rewards
-func withdrawDelegationRewardsHandlerFn(cdc *codec.Codec, cliCtx context.CLIContext) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var req withdrawRewardsReq
-
-		if !rest.ReadRESTReq(w, r, cdc, &req) {
-			return
-		}
-
-		req.BaseReq = req.BaseReq.Sanitize()
-		if !req.BaseReq.ValidateBasic(w) {
-			return
-		}
-
-		// read and validate URL's variables
-		delAddr, ok := checkDelegatorAddressVar(w, r)
-		if !ok {
-			return
-		}
-
-		valAddr, ok := checkValidatorAddressVar(w, r)
-		if !ok {
-			return
-		}
-
-		msg := types.NewMsgWithdrawDelegatorReward(delAddr, valAddr)
-		if err := msg.ValidateBasic(); err != nil {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-			return
-		}
-
-		clientrest.WriteGenerateStdTxResponse(w, cdc, cliCtx, req.BaseReq, []sdk.Msg{msg})
-	}
-}
+// func withdrawDelegationRewardsHandlerFn(cdc *codec.Codec, cliCtx context.CLIContext) http.HandlerFunc {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		var req withdrawRewardsReq
+//
+// 		if !rest.ReadRESTReq(w, r, cdc, &req) {
+// 			return
+// 		}
+//
+// 		req.BaseReq = req.BaseReq.Sanitize()
+// 		if !req.BaseReq.ValidateBasic(w) {
+// 			return
+// 		}
+//
+// 		// read and validate URL's variables
+// 		delAddr, ok := checkDelegatorAddressVar(w, r)
+// 		if !ok {
+// 			return
+// 		}
+//
+// 		valAddr, ok := checkValidatorAddressVar(w, r)
+// 		if !ok {
+// 			return
+// 		}
+//
+// 		msg := types.NewMsgWithdrawDelegatorReward(delAddr, valAddr)
+// 		if err := msg.ValidateBasic(); err != nil {
+// 			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+// 			return
+// 		}
+//
+// 		clientrest.WriteGenerateStdTxResponse(w, cdc, cliCtx, req.BaseReq, []sdk.Msg{msg})
+// 	}
+// }
 
 // Replace the rewards withdrawal address
 func setDelegatorWithdrawalAddrHandlerFn(cdc *codec.Codec, cliCtx context.CLIContext) http.HandlerFunc {

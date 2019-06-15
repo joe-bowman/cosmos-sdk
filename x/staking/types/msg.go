@@ -29,6 +29,7 @@ type MsgCreateValidator struct {
 	ValidatorAddress  sdk.ValAddress `json:"validator_address"`
 	PubKey            crypto.PubKey  `json:"pubkey"`
 	Value             sdk.Coin       `json:"value"`
+	ShareTokenDenom   string         `json:"share_token_denom"`
 }
 
 type msgCreateValidatorJSON struct {
@@ -39,12 +40,14 @@ type msgCreateValidatorJSON struct {
 	ValidatorAddress  sdk.ValAddress `json:"validator_address"`
 	PubKey            string         `json:"pubkey"`
 	Value             sdk.Coin       `json:"value"`
+	ShareTokenDenom   string         `json:"share_token_denom"`
 }
 
 // Default way to create validator. Delegator address and validator address are the same
 func NewMsgCreateValidator(
 	valAddr sdk.ValAddress, pubKey crypto.PubKey, selfDelegation sdk.Coin,
 	description Description, commission CommissionMsg, minSelfDelegation sdk.Int,
+	shareTokenDenom string,
 ) MsgCreateValidator {
 
 	return MsgCreateValidator{
@@ -55,6 +58,7 @@ func NewMsgCreateValidator(
 		Value:             selfDelegation,
 		Commission:        commission,
 		MinSelfDelegation: minSelfDelegation,
+		ShareTokenDenom:   shareTokenDenom,
 	}
 }
 
@@ -86,6 +90,7 @@ func (msg MsgCreateValidator) MarshalJSON() ([]byte, error) {
 		PubKey:            sdk.MustBech32ifyConsPub(msg.PubKey),
 		Value:             msg.Value,
 		MinSelfDelegation: msg.MinSelfDelegation,
+		ShareTokenDenom:   msg.ShareTokenDenom,
 	})
 }
 
@@ -108,6 +113,7 @@ func (msg *MsgCreateValidator) UnmarshalJSON(bz []byte) error {
 	}
 	msg.Value = msgCreateValJSON.Value
 	msg.MinSelfDelegation = msgCreateValJSON.MinSelfDelegation
+	msg.ShareTokenDenom = msgCreateValJSON.ShareTokenDenom
 
 	return nil
 }
@@ -138,6 +144,10 @@ func (msg MsgCreateValidator) ValidateBasic() sdk.Error {
 	}
 	if msg.Commission == (CommissionMsg{}) {
 		return sdk.NewError(DefaultCodespace, CodeInvalidInput, "commission must be included")
+	}
+
+	if msg.ShareTokenDenom == "" {
+		return sdk.NewError(DefaultCodespace, CodeInvalidInput, "share token denomination must be included.")
 	}
 	if !msg.MinSelfDelegation.GT(sdk.ZeroInt()) {
 		return ErrMinSelfDelegationInvalid(DefaultCodespace)

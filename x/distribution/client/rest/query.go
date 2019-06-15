@@ -20,16 +20,16 @@ func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router,
 	cdc *codec.Codec, queryRoute string) {
 
 	// Get the total rewards balance from all delegations
-	r.HandleFunc(
-		"/distribution/delegators/{delegatorAddr}/rewards",
-		delegatorRewardsHandlerFn(cliCtx, cdc, queryRoute),
-	).Methods("GET")
+	// r.HandleFunc(
+	// 	"/distribution/delegators/{delegatorAddr}/rewards",
+	// 	delegatorRewardsHandlerFn(cliCtx, cdc, queryRoute),
+	// ).Methods("GET")
 
 	// Query a delegation reward
-	r.HandleFunc(
-		"/distribution/delegators/{delegatorAddr}/rewards/{validatorAddr}",
-		delegationRewardsHandlerFn(cliCtx, cdc, queryRoute),
-	).Methods("GET")
+	// r.HandleFunc(
+	// 	"/distribution/delegators/{delegatorAddr}/rewards/{validatorAddr}",
+	// 	delegationRewardsHandlerFn(cliCtx, cdc, queryRoute),
+	// ).Methods("GET")
 
 	// Get the rewards withdrawal address
 	r.HandleFunc(
@@ -50,10 +50,10 @@ func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router,
 	).Methods("GET")
 
 	// Outstanding rewards of a single validator
-	r.HandleFunc(
-		"/distribution/validators/{validatorAddr}/outstanding_rewards",
-		outstandingRewardsHandlerFn(cliCtx, cdc, queryRoute),
-	).Methods("GET")
+	// r.HandleFunc(
+	// 	"/distribution/validators/{validatorAddr}/outstanding_rewards",
+	// 	outstandingRewardsHandlerFn(cliCtx, cdc, queryRoute),
+	// ).Methods("GET")
 
 	// Get the current distribution parameter values
 	r.HandleFunc(
