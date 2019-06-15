@@ -3,6 +3,7 @@ package keeper
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -455,34 +456,31 @@ func (k Keeper) Delegate(ctx sdk.Context, delAddr sdk.AccAddress, bondAmt sdk.In
 		return sdk.ZeroDec(), types.ErrDelegatorShareExRateInvalid(k.Codespace())
 	}
 
-	// Get or create the delegation object
-	delegation, found := k.GetDelegation(ctx, delAddr, validator.OperatorAddress)
-	if !found {
-		delegation = types.NewDelegation(delAddr, validator.OperatorAddress, sdk.ZeroDec())
-	}
-
-	// call the appropriate hook if present
-	if found {
-		k.BeforeDelegationSharesModified(ctx, delAddr, validator.OperatorAddress)
-	} else {
-		k.BeforeDelegationCreated(ctx, delAddr, validator.OperatorAddress)
-	}
+	sharesDenomName := strings.ToLower(fmt.Sprintf("%s%s", validator.GetSharesDenomPrefix(), k.GetParams(ctx).BondDenom))
 
 	if subtractAccount {
-		_, err := k.bankKeeper.DelegateCoins(ctx, delegation.DelegatorAddress, sdk.Coins{sdk.NewCoin(k.GetParams(ctx).BondDenom, bondAmt)})
+		_, err := k.bankKeeper.DelegateCoins(ctx, delAddr, sdk.Coins{sdk.NewCoin(k.GetParams(ctx).BondDenom, bondAmt)})
 		if err != nil {
 			return sdk.Dec{}, err
 		}
 	}
+	// second arg below is change. truncate decimal part of share. how do we handle this. it'll be dust, but needs to be accounted for otherwise break invariants.
+	// award dust to validator.
+	sharesCoin, _ := sdk.NewDecCoinFromDec(sharesDenomName, sdk.NewDec(bondAmt.BigInt().Int64()).Quo(validator.GetSharesConversionRate())).TruncateDecimal()
+	_, _, err = k.bankKeeper.AddCoins(ctx, delAddr, sdk.Coins{sharesCoin})
+	if err != nil {
+		return sdk.Dec{}, err
+	}
 
+	// didn't update the below. seems sane.
 	validator, newShares = k.AddValidatorTokensAndShares(ctx, validator, bondAmt)
 
 	// Update delegation
-	delegation.Shares = delegation.Shares.Add(newShares)
-	k.SetDelegation(ctx, delegation)
+	//delegation.Shares = delegation.Shares.Add(newShares)
+	//k.SetDelegation(ctx, delegation)
 
 	// Call the after-modification hook
-	k.AfterDelegationModified(ctx, delegation.DelegatorAddress, delegation.ValidatorAddress)
+	k.AfterDelegationModified(ctx, delAddr, validator.OperatorAddress)
 
 	return newShares, nil
 }

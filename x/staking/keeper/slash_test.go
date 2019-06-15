@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -26,7 +27,7 @@ func setupHelper(t *testing.T, power int64) (sdk.Context, Keeper, types.Params) 
 
 	// add numVals validators
 	for i := int64(0); i < numVals; i++ {
-		validator := types.NewValidator(addrVals[i], PKs[i], types.Description{})
+		validator := types.NewValidator(addrVals[i], PKs[i], types.Description{}, fmt.Sprintf("VAL%d", i))
 		validator, pool, _ = validator.AddTokensFromDel(pool, amt)
 		pool.BondedTokens = pool.BondedTokens.Add(amt)
 		keeper.SetPool(ctx, pool)

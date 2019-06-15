@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -20,7 +21,7 @@ func TestDelegation(t *testing.T) {
 	amts := []sdk.Int{sdk.NewInt(9), sdk.NewInt(8), sdk.NewInt(7)}
 	var validators [3]types.Validator
 	for i, amt := range amts {
-		validators[i] = types.NewValidator(addrVals[i], PKs[i], types.Description{}, fmt.Sprintf("DEN%i, i))
+		validators[i] = types.NewValidator(addrVals[i], PKs[i], types.Description{}, fmt.Sprintf("DEN%d", i))
 		validators[i], pool, _ = validators[i].AddTokensFromDel(pool, amt)
 	}
 
@@ -306,7 +307,7 @@ func TestUndelegateFromUnbondingValidator(t *testing.T) {
 	pool.NotBondedTokens = startTokens
 
 	//create a validator with a self-delegation
-	validator := types.NewValidator(addrVals[0], PKs[0], types.Description{})
+	validator := types.NewValidator(addrVals[0], PKs[0], types.Description{}, "ONE")
 
 	valTokens := sdk.TokensFromTendermintPower(10)
 	validator, pool, issuedShares := validator.AddTokensFromDel(pool, valTokens)

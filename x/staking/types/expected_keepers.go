@@ -19,6 +19,8 @@ type BankKeeper interface {
 	UndelegateCoins(ctx sdk.Context, addr sdk.AccAddress, amt sdk.Coins) (sdk.Tags, sdk.Error)
 	SubtractCoins(ctx sdk.Context, addr sdk.AccAddress, amt sdk.Coins) (sdk.Coins, sdk.Tags, sdk.Error)
 	AddCoins(ctx sdk.Context, addr sdk.AccAddress, amt sdk.Coins) (sdk.Coins, sdk.Tags, sdk.Error)
+	GetCoins(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
+	HasCoins(ctx sdk.Context, addr sdk.AccAddress, sdk.Coins) bool 
 }
 
 // expected crisis keeper
