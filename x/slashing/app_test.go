@@ -109,7 +109,7 @@ func TestSlashingMsgs(t *testing.T) {
 	commission := staking.NewCommissionMsg(sdk.ZeroDec(), sdk.ZeroDec(), sdk.ZeroDec())
 
 	createValidatorMsg := staking.NewMsgCreateValidator(
-		sdk.ValAddress(addr1), priv1.PubKey(), bondCoin, description, commission, sdk.OneInt(),
+		sdk.ValAddress(addr1), priv1.PubKey(), bondCoin, description, commission, sdk.OneInt(), "wompwo",
 	)
 
 	header := abci.Header{Height: mapp.LastBlockHeight() + 1}
