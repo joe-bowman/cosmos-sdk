@@ -105,7 +105,7 @@ func makeMsg(name string, pk crypto.PubKey) auth.StdTx {
 	desc := staking.NewDescription(name, "", "", "")
 	comm := staking.CommissionMsg{}
 	msg := staking.NewMsgCreateValidator(sdk.ValAddress(pk.Address()), pk, sdk.NewInt64Coin(defaultBondDenom,
-		50), desc, comm, sdk.OneInt())
+		50), desc, comm, sdk.OneInt(), "genval")
 	return auth.NewStdTx([]sdk.Msg{msg}, auth.StdFee{}, nil, "")
 }
 
@@ -130,7 +130,7 @@ func TestGaiaGenesisValidation(t *testing.T) {
 
 	// require bonded + jailed validator fails validation
 	genesisState = makeGenesisState(t, genTxs)
-	val1 := staking.NewValidator(addr1, pk1, staking.NewDescription("test #2", "", "", ""))
+	val1 := staking.NewValidator(addr1, pk1, staking.NewDescription("test #2", "", "", ""), "genval")
 	val1.Jailed = true
 	val1.Status = sdk.Bonded
 	genesisState.StakingData.Validators = append(genesisState.StakingData.Validators, val1)
@@ -140,7 +140,7 @@ func TestGaiaGenesisValidation(t *testing.T) {
 	// require duplicate validator fails validation
 	val1.Jailed = false
 	genesisState = makeGenesisState(t, genTxs)
-	val2 := staking.NewValidator(addr1, pk1, staking.NewDescription("test #3", "", "", ""))
+	val2 := staking.NewValidator(addr1, pk1, staking.NewDescription("test #3", "", "", ""), "genval2")
 	genesisState.StakingData.Validators = append(genesisState.StakingData.Validators, val1)
 	genesisState.StakingData.Validators = append(genesisState.StakingData.Validators, val2)
 	err = GaiaValidateGenesisState(genesisState)

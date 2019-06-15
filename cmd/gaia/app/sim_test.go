@@ -226,7 +226,7 @@ func appStateRandomizedFn(r *rand.Rand, accs []simulation.Account, genesisTimest
 		valAddr := sdk.ValAddress(accs[i].Address)
 		valAddrs[i] = valAddr
 
-		validator := staking.NewValidator(valAddr, accs[i].PubKey, staking.Description{})
+		validator := staking.NewValidator(valAddr, accs[i].PubKey, staking.Description{}, "genval")
 		validator.Tokens = sdk.NewInt(amount)
 		validator.DelegatorShares = sdk.NewDec(amount)
 		delegation := staking.Delegation{accs[i].Address, valAddr, sdk.NewDec(amount)}
