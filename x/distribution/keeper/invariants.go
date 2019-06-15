@@ -66,7 +66,7 @@ func CanWithdrawInvariant(k Keeper, sk types.StakingKeeper) sdk.Invariant {
 		// cache, we don't want to write changes
 		ctx, _ = ctx.CacheContext()
 
-		var remaining sdk.DecCoins
+		//var remaining sdk.DecCoins
 
 		valDelegationAddrs := make(map[string][]sdk.AccAddress)
 		for _, del := range sk.GetAllSDKDelegations(ctx) {
@@ -98,7 +98,7 @@ func CanWithdrawInvariant(k Keeper, sk types.StakingKeeper) sdk.Invariant {
 		//	return fmt.Errorf("negative remaining coins: %v", remaining)
 		//}
 
-		//return nil
+		return nil
 	}
 }
 

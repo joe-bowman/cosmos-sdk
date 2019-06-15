@@ -464,8 +464,10 @@ func (k Keeper) Delegate(ctx sdk.Context, delAddr sdk.AccAddress, bondAmt sdk.In
 			return sdk.Dec{}, err
 		}
 	}
-	// second arg below is change. truncate decimal part of share. how do we handle this. it'll be dust, but needs to be accounted for otherwise break invariants.
+	// TODO: second arg below is change. truncate decimal part of share. how do we handle this. it'll be dust, but needs to be accounted for otherwise break invariants.
 	// award dust to validator.
+	fmt.Printf("Tokens: %s\n", validator.GetBondedTokens().String())
+	fmt.Printf("Rate: %s\n", validator.GetSharesConversionRate().String())
 	sharesCoin, _ := sdk.NewDecCoinFromDec(sharesDenomName, sdk.NewDec(bondAmt.BigInt().Int64()).Quo(validator.GetSharesConversionRate())).TruncateDecimal()
 	_, _, err = k.bankKeeper.AddCoins(ctx, delAddr, sdk.Coins{sharesCoin})
 	if err != nil {

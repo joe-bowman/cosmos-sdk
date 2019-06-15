@@ -492,17 +492,23 @@ func (v Validator) PotentialTendermintPower() int64 {
 var _ sdk.Validator = Validator{}
 
 // nolint - for sdk.Validator
-func (v Validator) IsJailed() bool                   { return v.Jailed }
-func (v Validator) GetMoniker() string               { return v.Description.Moniker }
-func (v Validator) GetStatus() sdk.BondStatus        { return v.Status }
-func (v Validator) GetOperator() sdk.ValAddress      { return v.OperatorAddress }
-func (v Validator) GetConsPubKey() crypto.PubKey     { return v.ConsPubKey }
-func (v Validator) GetConsAddr() sdk.ConsAddress     { return sdk.ConsAddress(v.ConsPubKey.Address()) }
-func (v Validator) GetTokens() sdk.Int               { return v.Tokens }
-func (v Validator) GetBondedTokens() sdk.Int         { return v.BondedTokens() }
-func (v Validator) GetTendermintPower() int64        { return v.TendermintPower() }
-func (v Validator) GetCommission() sdk.Dec           { return v.Commission.Rate }
-func (v Validator) GetMinSelfDelegation() sdk.Int    { return v.MinSelfDelegation }
-func (v Validator) GetDelegatorShares() sdk.Dec      { return v.DelegatorShares }
-func (v Validator) GetSharesDenomPrefix() string     { return v.SharesDenomPrefix }
-func (v Validator) GetSharesConversionRate() sdk.Dec { return v.DelegatorShares.QuoInt(v.Tokens) }
+func (v Validator) IsJailed() bool                { return v.Jailed }
+func (v Validator) GetMoniker() string            { return v.Description.Moniker }
+func (v Validator) GetStatus() sdk.BondStatus     { return v.Status }
+func (v Validator) GetOperator() sdk.ValAddress   { return v.OperatorAddress }
+func (v Validator) GetConsPubKey() crypto.PubKey  { return v.ConsPubKey }
+func (v Validator) GetConsAddr() sdk.ConsAddress  { return sdk.ConsAddress(v.ConsPubKey.Address()) }
+func (v Validator) GetTokens() sdk.Int            { return v.Tokens }
+func (v Validator) GetBondedTokens() sdk.Int      { return v.BondedTokens() }
+func (v Validator) GetTendermintPower() int64     { return v.TendermintPower() }
+func (v Validator) GetCommission() sdk.Dec        { return v.Commission.Rate }
+func (v Validator) GetMinSelfDelegation() sdk.Int { return v.MinSelfDelegation }
+func (v Validator) GetDelegatorShares() sdk.Dec   { return v.DelegatorShares }
+func (v Validator) GetSharesDenomPrefix() string  { return v.SharesDenomPrefix }
+func (v Validator) GetSharesConversionRate() sdk.Dec {
+	if v.Tokens.Equal(sdk.ZeroInt()) {
+		return sdk.NewDec(1.0)
+	} else {
+		return v.DelegatorShares.QuoInt(v.Tokens)
+	}
+}

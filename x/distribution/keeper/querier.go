@@ -43,11 +43,11 @@ func NewQuerier(k Keeper) sdk.Querier {
 		case QueryValidatorSlashes:
 			return queryValidatorSlashes(ctx, path[1:], req, k)
 
-		case QueryDelegationRewards:
-			return queryDelegationRewards(ctx, path[1:], req, k)
+		//case QueryDelegationRewards:
+		//	return queryDelegationRewards(ctx, path[1:], req, k)
 
-		case QueryDelegatorTotalRewards:
-			return queryDelegatorTotalRewards(ctx, path[1:], req, k)
+		//case QueryDelegatorTotalRewards:
+		//	return queryDelegatorTotalRewards(ctx, path[1:], req, k)
 
 		case QueryDelegatorValidators:
 			return queryDelegatorValidators(ctx, path[1:], req, k)
@@ -189,47 +189,47 @@ type QueryDelegationRewardsParams struct {
 }
 
 // creates a new instance of QueryDelegationRewardsParams
-func NewQueryDelegationRewardsParams(delegatorAddr sdk.AccAddress, validatorAddr sdk.ValAddress) QueryDelegationRewardsParams {
-	return QueryDelegationRewardsParams{
-		DelegatorAddress: delegatorAddr,
-		ValidatorAddress: validatorAddr,
-	}
-}
+// func NewQueryDelegationRewardsParams(delegatorAddr sdk.AccAddress, validatorAddr sdk.ValAddress) QueryDelegationRewardsParams {
+// 	return QueryDelegationRewardsParams{
+// 		DelegatorAddress: delegatorAddr,
+// 		ValidatorAddress: validatorAddr,
+// 	}
+// }
 
-func queryDelegationRewards(ctx sdk.Context, _ []string, req abci.RequestQuery, k Keeper) ([]byte, sdk.Error) {
-	var params QueryDelegationRewardsParams
-	err := k.cdc.UnmarshalJSON(req.Data, &params)
-	if err != nil {
-		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("incorrectly formatted request data", err.Error()))
-	}
-
-	// cache-wrap context as to not persist state changes during querying
-	ctx, _ = ctx.CacheContext()
-
-	val := k.stakingKeeper.Validator(ctx, params.ValidatorAddress)
-	if val == nil {
-		// TODO: Should use ErrNoValidatorFound from staking/types
-		return nil, sdk.ErrInternal(fmt.Sprintf("validator %s does not exist", params.ValidatorAddress))
-	}
-
-	del := k.stakingKeeper.Delegation(ctx, params.DelegatorAddress, params.ValidatorAddress)
-	if del == nil {
-		// TODO: Should use ErrNoDelegation from staking/types
-		return nil, sdk.ErrInternal("delegation does not exist")
-	}
-
-	endingPeriod := k.incrementValidatorPeriod(ctx, val)
-	rewards := k.calculateDelegationRewards(ctx, val, del, endingPeriod)
-
-	bz, err := codec.MarshalJSONIndent(k.cdc, rewards)
-	if err != nil {
-		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
-	}
-
-	return bz, nil
-}
-
-// params for query 'custom/distr/delegator_total_rewards' and 'custom/distr/delegator_validators'
+// func queryDelegationRewards(ctx sdk.Context, _ []string, req abci.RequestQuery, k Keeper) ([]byte, sdk.Error) {
+// 	var params QueryDelegationRewardsParams
+// 	err := k.cdc.UnmarshalJSON(req.Data, &params)
+// 	if err != nil {
+// 		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("incorrectly formatted request data", err.Error()))
+// 	}
+//
+// 	// cache-wrap context as to not persist state changes during querying
+// 	ctx, _ = ctx.CacheContext()
+//
+// 	val := k.stakingKeeper.Validator(ctx, params.ValidatorAddress)
+// 	if val == nil {
+// 		// TODO: Should use ErrNoValidatorFound from staking/types
+// 		return nil, sdk.ErrInternal(fmt.Sprintf("validator %s does not exist", params.ValidatorAddress))
+// 	}
+//
+// 	del := k.stakingKeeper.Delegation(ctx, params.DelegatorAddress, params.ValidatorAddress)
+// 	if del == nil {
+// 		// TODO: Should use ErrNoDelegation from staking/types
+// 		return nil, sdk.ErrInternal("delegation does not exist")
+// 	}
+//
+// 	//endingPeriod := k.incrementValidatorPeriod(ctx, val)
+// 	//rewards := k.calculateDelegationRewards(ctx, val, del, endingPeriod)
+//
+// 	bz, err := codec.MarshalJSONIndent(k.cdc, rewards)
+// 	if err != nil {
+// 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
+// 	}
+//
+// 	return bz, nil
+// }
+//
+// // params for query 'custom/distr/delegator_total_rewards' and 'custom/distr/delegator_validators'
 type QueryDelegatorParams struct {
 	DelegatorAddress sdk.AccAddress `json:"delegator_address"`
 }
@@ -241,37 +241,37 @@ func NewQueryDelegatorParams(delegatorAddr sdk.AccAddress) QueryDelegatorParams 
 	}
 }
 
-func queryDelegatorTotalRewards(ctx sdk.Context, _ []string, req abci.RequestQuery, k Keeper) ([]byte, sdk.Error) {
-	var params QueryDelegatorParams
-	err := k.cdc.UnmarshalJSON(req.Data, &params)
-	if err != nil {
-		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("incorrectly formatted request data", err.Error()))
-	}
-
-	// cache-wrap context as to not persist state changes during querying
-	ctx, _ = ctx.CacheContext()
-
-	var totalRewards sdk.DecCoins
-
-	k.stakingKeeper.IterateDelegations(
-		ctx, params.DelegatorAddress,
-		func(_ int64, del sdk.Delegation) (stop bool) {
-			val := k.stakingKeeper.Validator(ctx, del.GetValidatorAddr())
-			endingPeriod := k.incrementValidatorPeriod(ctx, val)
-			rewards := k.calculateDelegationRewards(ctx, val, del, endingPeriod)
-
-			totalRewards = totalRewards.Add(rewards)
-			return false
-		},
-	)
-
-	bz, err := codec.MarshalJSONIndent(k.cdc, totalRewards)
-	if err != nil {
-		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
-	}
-
-	return bz, nil
-}
+// func queryDelegatorTotalRewards(ctx sdk.Context, _ []string, req abci.RequestQuery, k Keeper) ([]byte, sdk.Error) {
+// 	var params QueryDelegatorParams
+// 	err := k.cdc.UnmarshalJSON(req.Data, &params)
+// 	if err != nil {
+// 		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("incorrectly formatted request data", err.Error()))
+// 	}
+//
+// 	// cache-wrap context as to not persist state changes during querying
+// 	ctx, _ = ctx.CacheContext()
+//
+// 	var totalRewards sdk.DecCoins
+//
+// 	k.stakingKeeper.IterateDelegations(
+// 		ctx, params.DelegatorAddress,
+// 		func(_ int64, del sdk.Delegation) (stop bool) {
+// 			val := k.stakingKeeper.Validator(ctx, del.GetValidatorAddr())
+// 			//endingPeriod := k.incrementValidatorPeriod(ctx, val)
+// 			rewards := k.calculateDelegationRewards(ctx, val, del, endingPeriod)
+//
+// 			totalRewards = totalRewards.Add(rewards)
+// 			return false
+// 		},
+// 	)
+//
+// 	bz, err := codec.MarshalJSONIndent(k.cdc, totalRewards)
+// 	if err != nil {
+// 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
+// 	}
+//
+// 	return bz, nil
+// }
 
 func queryDelegatorValidators(ctx sdk.Context, _ []string, req abci.RequestQuery, k Keeper) ([]byte, sdk.Error) {
 	var params QueryDelegatorParams
