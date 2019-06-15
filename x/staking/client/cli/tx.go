@@ -47,11 +47,13 @@ func GetCmdCreateValidator(cdc *codec.Codec) *cobra.Command {
 
 	cmd.Flags().String(FlagIP, "", fmt.Sprintf("The node's public IP. It takes effect only when used in combination with --%s", client.FlagGenerateOnly))
 	cmd.Flags().String(FlagNodeID, "", "The node's ID")
+	cmd.Flags().String(FlagSharesDenomPrefix, "", "The validators share denomination prefix")
 
 	cmd.MarkFlagRequired(client.FlagFrom)
 	cmd.MarkFlagRequired(FlagAmount)
 	cmd.MarkFlagRequired(FlagPubKey)
 	cmd.MarkFlagRequired(FlagMoniker)
+	cmd.MarkFlagRequired(FlagSharesDenomPrefix)
 
 	return cmd
 }
@@ -255,8 +257,13 @@ func BuildCreateValidatorMsg(cliCtx context.CLIContext, txBldr authtxb.TxBuilder
 		return txBldr, nil, fmt.Errorf(staking.ErrMinSelfDelegationInvalid(staking.DefaultCodespace).Error())
 	}
 
+  sharesDenominationPrefix := viper.GetString(FlagSharesDenomPrefix)
+	if (sharesDenominationPrefix.length() > 6 || sharesDenominationPrefix.length() < 2) {
+		return txBldr, nil, fmt.Errorf(staking.ErrDenomPrefixInvalid(staking.DefaultCodespace).Error())
+	}
+
 	msg := staking.NewMsgCreateValidator(
-		sdk.ValAddress(valAddr), pk, amount, description, commissionMsg, minSelfDelegation,
+		sdk.ValAddress(valAddr), pk, amount, description, commissionMsg, minSelfDelegation, sharesDenominationPrefix
 	)
 
 	if viper.GetBool(client.FlagGenerateOnly) {

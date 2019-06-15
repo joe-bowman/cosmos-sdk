@@ -99,6 +99,10 @@ func ErrMinSelfDelegationInvalid(codespace sdk.CodespaceType) sdk.Error {
 	return sdk.NewError(codespace, CodeInvalidValidator, "minimum self delegation must be a positive integer")
 }
 
+func ErrDenomPrefixInvalid(codespace sdk.CodespaceType) sdk.Error {
+	return sdk.NewError(codespace, CodeInvalidValidator, "shares denomination prefix must be between 2 and 6 characters in length")
+}
+
 func ErrMinSelfDelegationDecreased(codespace sdk.CodespaceType) sdk.Error {
 	return sdk.NewError(codespace, CodeInvalidValidator, "minimum self delegation cannot be decrease")
 }
