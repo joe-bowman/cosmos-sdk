@@ -32,28 +32,6 @@ func GetCmdQueryParams(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	}
 }
 
-// GetCmdQueryValidatorOutstandingRewards implements the query validator outstanding rewards command.
-func GetCmdQueryValidatorOutstandingRewards(queryRoute string, cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
-		Use:   "validator-outstanding-rewards",
-		Args:  cobra.NoArgs,
-		Short: "Query distribution outstanding (un-withdrawn) rewards for a validator and all their delegations",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
-
-			route := fmt.Sprintf("custom/%s/validator_outstanding_rewards", queryRoute)
-			res, err := cliCtx.QueryWithData(route, []byte{})
-			if err != nil {
-				return err
-			}
-
-			var outstandingRewards types.ValidatorOutstandingRewards
-			cdc.MustUnmarshalJSON(res, &outstandingRewards)
-			return cliCtx.PrintOutput(outstandingRewards)
-		},
-	}
-}
-
 // GetCmdQueryValidatorCommission implements the query validator commission command.
 func GetCmdQueryValidatorCommission(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
@@ -126,40 +104,6 @@ $ gaiacli query distr slashes cosmosvaloper1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhf
 			var slashes types.ValidatorSlashEvents
 			cdc.MustUnmarshalJSON(res, &slashes)
 			return cliCtx.PrintOutput(slashes)
-		},
-	}
-}
-
-// GetCmdQueryDelegatorRewards implements the query delegator rewards command.
-func GetCmdQueryDelegatorRewards(queryRoute string, cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
-		Use:   "rewards [delegator-addr] [<validator-addr>]",
-		Args:  cobra.RangeArgs(1, 2),
-		Short: "Query all distribution delegator rewards or rewards from a particular validator",
-		Long: strings.TrimSpace(`Query all rewards earned by a delegator, optionally restrict to rewards from a single validator:
-
-$ gaiacli query distr rewards cosmos1gghjut3ccd8ay0zduzj64hwre2fxs9ld75ru9p
-$ gaiacli query distr rewards cosmos1gghjut3ccd8ay0zduzj64hwre2fxs9ld75ru9p cosmosvaloper1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj
-`),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
-
-			var resp []byte
-			var err error
-			if len(args) == 2 {
-				// query for rewards from a particular delegation
-				resp, err = common.QueryDelegationRewards(cliCtx, cdc, queryRoute, args[0], args[1])
-			} else {
-				// query for delegator total rewards
-				resp, err = common.QueryDelegatorTotalRewards(cliCtx, cdc, queryRoute, args[0])
-			}
-			if err != nil {
-				return err
-			}
-
-			var result sdk.DecCoins
-			cdc.MustUnmarshalJSON(resp, &result)
-			return cliCtx.PrintOutput(result)
 		},
 	}
 }

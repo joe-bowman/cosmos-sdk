@@ -441,14 +441,17 @@ func (k Keeper) Delegate(ctx sdk.Context, delAddr sdk.AccAddress, bondAmt sdk.In
 	// award dust to validator.
 	fmt.Printf("Tokens: %s\n", validator.GetBondedTokens().String())
 	fmt.Printf("Rate: %s\n", validator.GetSharesConversionRate().String())
-	sharesCoin, _ := sdk.NewDecCoinFromDec(sharesDenomName, sdk.NewDec(bondAmt.BigInt().Int64()).Quo(validator.GetSharesConversionRate())).TruncateDecimal()
+
+	validator, newShares = k.AddValidatorTokensAndShares(ctx, validator, bondAmt)
+	fmt.Printf("New Shares: %f", newShares)
+	sharesCoin := sdk.NewCoin(sharesDenomName, newShares.TruncateInt())
+
 	_, _, err = k.bankKeeper.AddCoins(ctx, delAddr, sdk.Coins{sharesCoin})
 	if err != nil {
 		return sdk.Dec{}, err
 	}
 
 	// didn't update the below. seems sane.
-	validator, newShares = k.AddValidatorTokensAndShares(ctx, validator, bondAmt)
 
 	// Update delegation
 	//delegation.Shares = delegation.Shares.Add(newShares)

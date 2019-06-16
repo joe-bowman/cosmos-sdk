@@ -55,25 +55,6 @@ func QueryDelegatorTotalRewards(cliCtx context.CLIContext, cdc *codec.Codec,
 	)
 }
 
-// QueryDelegationRewards queries a delegation rewards.
-func QueryDelegationRewards(cliCtx context.CLIContext, cdc *codec.Codec,
-	queryRoute, delAddr, valAddr string) ([]byte, error) {
-
-	delegatorAddr, err := sdk.AccAddressFromBech32(delAddr)
-	if err != nil {
-		return nil, err
-	}
-	validatorAddr, err := sdk.ValAddressFromBech32(valAddr)
-	if err != nil {
-		return nil, err
-	}
-
-	return cliCtx.QueryWithData(
-		fmt.Sprintf("custom/%s/delegation_rewards", queryRoute),
-		cdc.MustMarshalJSON(distr.NewQueryDelegationRewardsParams(delegatorAddr, validatorAddr)),
-	)
-}
-
 // QueryDelegatorValidators returns delegator's list of validators
 // it submitted delegations to.
 func QueryDelegatorValidators(cliCtx context.CLIContext, cdc *codec.Codec,

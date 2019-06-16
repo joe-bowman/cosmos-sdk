@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	amino "github.com/tendermint/go-amino"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -37,7 +36,6 @@ func GetTxCmd(storeKey string, cdc *amino.Codec) *cobra.Command {
 	}
 
 	distTxCmd.AddCommand(client.PostCommands(
-		GetCmdWithdrawRewards(cdc),
 		GetCmdSetWithdrawAddr(cdc),
 	)...)
 
@@ -94,12 +92,9 @@ $ gaiacli tx distr withdraw-commission --from mykey
 				WithAccountDecoder(cdc)
 
 			delAddr := cliCtx.GetFromAddress()
-			valAddr, err := sdk.ValAddress(delAddr.bytes())
-			if err != nil {
-				return err
-			}
+			valAddr := sdk.ValAddress(delAddr)
 
-			msgs := []sdk.Msg{types.NewMsgWithdrawValidatorCommission(valAddr))
+			msgs := []sdk.Msg{types.NewMsgWithdrawValidatorCommission(valAddr)}
 
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, msgs, false)
 		},

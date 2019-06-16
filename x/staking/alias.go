@@ -73,8 +73,8 @@ var (
 	AllInvariants                = keeper.AllInvariants
 	SupplyInvariants             = keeper.SupplyInvariants
 	NonNegativePowerInvariant    = keeper.NonNegativePowerInvariant
-	PositiveDelegationInvariant  = keeper.PositiveDelegationInvariant
-	DelegatorSharesInvariant     = keeper.DelegatorSharesInvariant
+	//PositiveDelegationInvariant  = keeper.PositiveDelegationInvariant
+	//DelegatorSharesInvariant     = keeper.DelegatorSharesInvariant
 
 	DefaultParamspace = keeper.DefaultParamspace
 	KeyUnbondingTime  = types.KeyUnbondingTime

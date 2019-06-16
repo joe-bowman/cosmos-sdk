@@ -115,9 +115,10 @@ following delegation and commission default parameters:
 			website := viper.GetString(cli.FlagWebsite)
 			details := viper.GetString(cli.FlagDetails)
 			identity := viper.GetString(cli.FlagIdentity)
+			sharesDenomPrefix := viper.GetString(cli.FlagSharesDenomPrefix)
 
 			// Set flags for creating gentx
-			prepareFlagsForTxCreateValidator(config, nodeID, ip, genDoc.ChainID, valPubKey, website, details, identity)
+			prepareFlagsForTxCreateValidator(config, nodeID, ip, genDoc.ChainID, valPubKey, website, details, identity, sharesDenomPrefix)
 
 			// Fetch the amount of coins staked
 			amount := viper.GetString(cli.FlagAmount)
@@ -208,11 +209,13 @@ following delegation and commission default parameters:
 	cmd.Flags().String(cli.FlagWebsite, "", "The validator's (optional) website")
 	cmd.Flags().String(cli.FlagDetails, "", "The validator's (optional) details")
 	cmd.Flags().String(cli.FlagIdentity, "", "The (optional) identity signature (ex. UPort or Keybase)")
+	cmd.Flags().String(cli.FlagSharesDenomPrefix, "", "Validator's share denomination prefix")
 	cmd.Flags().AddFlagSet(cli.FsCommissionCreate)
 	cmd.Flags().AddFlagSet(cli.FsMinSelfDelegation)
 	cmd.Flags().AddFlagSet(cli.FsAmount)
 	cmd.Flags().AddFlagSet(cli.FsPk)
 	cmd.MarkFlagRequired(client.FlagName)
+	cmd.MarkFlagRequired(cli.FlagSharesDenomPrefix)
 	return cmd
 }
 
@@ -245,7 +248,7 @@ func accountInGenesis(genesisState app.GenesisState, key sdk.AccAddress, coins s
 }
 
 func prepareFlagsForTxCreateValidator(
-	config *cfg.Config, nodeID, ip, chainID string, valPubKey crypto.PubKey, website, details, identity string,
+	config *cfg.Config, nodeID, ip, chainID string, valPubKey crypto.PubKey, website, details, identity string, sharesDenomPrefix string,
 ) {
 	viper.Set(tmcli.HomeFlag, viper.GetString(flagClientHome))
 	viper.Set(client.FlagChainID, chainID)
@@ -257,6 +260,7 @@ func prepareFlagsForTxCreateValidator(
 	viper.Set(cli.FlagWebsite, website)
 	viper.Set(cli.FlagDetails, details)
 	viper.Set(cli.FlagIdentity, identity)
+	viper.Set(cli.FlagSharesDenomPrefix, sharesDenomPrefix)
 
 	if config.Moniker == "" {
 		viper.Set(cli.FlagMoniker, viper.GetString(client.FlagName))

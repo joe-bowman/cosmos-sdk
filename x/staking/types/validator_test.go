@@ -130,6 +130,7 @@ func TestAddTokensValidatorBonded(t *testing.T) {
 	validator := NewValidator(addr1, pk1, Description{}, "VAL")
 	validator, pool = validator.UpdateStatus(pool, sdk.Bonded)
 	validator, pool, delShares := validator.AddTokensFromDel(pool, sdk.NewInt(10))
+	validator, _ = validator.AddSharesFromDel(sdk.NewInt(10))
 
 	assert.True(sdk.DecEq(t, sdk.NewDec(10), delShares))
 	assert.True(sdk.IntEq(t, sdk.NewInt(10), validator.BondedTokens()))
@@ -142,6 +143,7 @@ func TestAddTokensValidatorUnbonding(t *testing.T) {
 	validator := NewValidator(addr1, pk1, Description{}, "VAL")
 	validator, pool = validator.UpdateStatus(pool, sdk.Unbonding)
 	validator, pool, delShares := validator.AddTokensFromDel(pool, sdk.NewInt(10))
+	validator, _ = validator.AddSharesFromDel(sdk.NewInt(10))
 
 	assert.True(sdk.DecEq(t, sdk.NewDec(10), delShares))
 	assert.Equal(t, sdk.Unbonding, validator.Status)
@@ -155,6 +157,7 @@ func TestAddTokensValidatorUnbonded(t *testing.T) {
 	validator := NewValidator(addr1, pk1, Description{}, "VAL")
 	validator, pool = validator.UpdateStatus(pool, sdk.Unbonded)
 	validator, pool, delShares := validator.AddTokensFromDel(pool, sdk.NewInt(10))
+	validator, _ = validator.AddSharesFromDel(sdk.NewInt(10))
 
 	assert.True(sdk.DecEq(t, sdk.NewDec(10), delShares))
 	assert.Equal(t, sdk.Unbonded, validator.Status)
@@ -218,6 +221,7 @@ func TestAddTokensFromDel(t *testing.T) {
 	pool.NotBondedTokens = sdk.NewInt(10)
 
 	val, pool, shares := val.AddTokensFromDel(pool, sdk.NewInt(6))
+	val, _ = val.AddSharesFromDel(sdk.NewInt(6))
 	require.True(sdk.DecEq(t, sdk.NewDec(6), shares))
 	require.True(sdk.DecEq(t, sdk.NewDec(6), val.DelegatorShares))
 	require.True(sdk.IntEq(t, sdk.NewInt(6), val.Tokens))
@@ -225,8 +229,9 @@ func TestAddTokensFromDel(t *testing.T) {
 	require.True(sdk.IntEq(t, sdk.NewInt(10), pool.NotBondedTokens))
 
 	val, pool, shares = val.AddTokensFromDel(pool, sdk.NewInt(3))
+	val, _ = val.AddSharesFromDel(sdk.NewInt(3))
 	require.True(sdk.DecEq(t, sdk.NewDec(3), shares))
-	require.True(sdk.DecEq(t, sdk.NewDec(9), val.DelegatorShares))
+	require.True(sdk.DecEq(t, sdk.NewDec(8), val.DelegatorShares))
 	require.True(sdk.IntEq(t, sdk.NewInt(9), val.Tokens))
 	require.True(sdk.IntEq(t, sdk.NewInt(0), pool.BondedTokens))
 	require.True(sdk.IntEq(t, sdk.NewInt(10), pool.NotBondedTokens))

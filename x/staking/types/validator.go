@@ -127,11 +127,11 @@ func (v Validator) String() string {
   Minimum Self Delegation:    %v
   Commission:                 %s
   Shares Prefix:              %s
-	Shares Conversion Rate:     %v`, v.OperatorAddress, bechConsPubKey,
+  Shares Conversion Rate:     %v`, v.OperatorAddress, bechConsPubKey,
 		v.Jailed, v.Status, v.Tokens,
 		v.DelegatorShares, v.Description,
 		v.UnbondingHeight, v.UnbondingCompletionTime, v.MinSelfDelegation,
-		v.Commission, v.SharesDenomPrefix, v.DelegatorShares.QuoInt(v.Tokens))
+		v.Commission, v.SharesDenomPrefix, v.Tokens.ToDec().Quo(v.DelegatorShares))
 }
 
 // this is a helper struct used for JSON de- and encoding only
@@ -362,32 +362,35 @@ func (v Validator) SetInitialCommission(commission Commission) (Validator, sdk.E
 	return v, nil
 }
 
-// AddTokensFromDel adds tokens to a validator
-// CONTRACT: Tokens are assumed to have come from not-bonded pool.
-func (v Validator) AddTokensFromDel(pool Pool, amount sdk.Int) (Validator, Pool, sdk.Dec) {
-
-	// calculate the shares to issue
+func (v Validator) AddSharesFromDel(amount sdk.Int) (Validator, sdk.Dec) {
+	//calculate the shares to issue
 	var issuedShares sdk.Dec
-	if v.DelegatorShares.IsZero() {
-		// the first delegation to a validator sets the exchange rate to one
-		issuedShares = amount.ToDec()
-	} else {
-		shares, err := v.SharesFromTokens(amount)
+	if v.DelegatorShares.GT(sdk.ZeroDec()) {
+		issuedShares, err := v.SharesFromTokens(amount)
+		v.DelegatorShares = v.DelegatorShares.Add(issuedShares) // having this in both branches is ridiculous _but_ go fails to compile otherwise. Which is downright daft.
 		if err != nil {
 			panic(err)
 		}
+	} else {
+		// the first delegation to a validator sets the exchange rate to one
+		issuedShares = amount.ToDec()
+		v.DelegatorShares = v.DelegatorShares.Add(issuedShares)
 
-		issuedShares = shares
 	}
+	return v, issuedShares
+}
+
+// AddTokensFromDel adds tokens to a validator
+// CONTRACT: Tokens are assumed to have come from not-bonded pool.
+func (v Validator) AddTokensFromDel(pool Pool, amount sdk.Int) (Validator, Pool, sdk.Dec) {
 
 	if v.Status == sdk.Bonded {
 		pool = pool.notBondedTokensToBonded(amount)
 	}
 
 	v.Tokens = v.Tokens.Add(amount)
-	v.DelegatorShares = v.DelegatorShares.Add(issuedShares)
 
-	return v, pool, issuedShares
+	return v, pool, amount.ToDec()
 }
 
 // RemoveDelShares removes delegator shares from a validator.
@@ -432,6 +435,9 @@ func (v Validator) InvalidExRate() bool {
 
 // calculate the token worth of provided shares
 func (v Validator) TokensFromShares(shares sdk.Dec) sdk.Dec {
+	if v.DelegatorShares.Equal(sdk.ZeroDec()) {
+		return shares
+	}
 	return (shares.MulInt(v.Tokens)).Quo(v.DelegatorShares)
 }
 
@@ -452,8 +458,7 @@ func (v Validator) SharesFromTokens(amt sdk.Int) (sdk.Dec, sdk.Error) {
 	if v.Tokens.IsZero() {
 		return sdk.ZeroDec(), ErrInsufficientShares(DefaultCodespace)
 	}
-
-	return v.GetDelegatorShares().MulInt(amt).QuoInt(v.GetTokens()), nil
+	return amt.ToDec().Quo(v.GetSharesConversionRate()), nil
 }
 
 // SharesFromTokensTruncated returns the truncated shares of a delegation given
@@ -509,6 +514,6 @@ func (v Validator) GetSharesConversionRate() sdk.Dec {
 	if v.Tokens.Equal(sdk.ZeroInt()) {
 		return sdk.NewDec(1.0)
 	} else {
-		return v.DelegatorShares.QuoInt(v.Tokens)
+		return v.Tokens.ToDec().Quo(v.DelegatorShares)
 	}
 }

@@ -126,11 +126,26 @@ func (k Keeper) AddValidatorTokensAndShares(ctx sdk.Context, validator types.Val
 
 	k.DeleteValidatorByPowerIndex(ctx, validator)
 	pool := k.GetPool(ctx)
-	validator, pool, addedShares = validator.AddTokensFromDel(pool, tokensToAdd)
+	validator, pool, _ = validator.AddTokensFromDel(pool, tokensToAdd)
+	validator, addedShares = validator.AddSharesFromDel(tokensToAdd)
+
 	k.SetValidator(ctx, validator)
 	k.SetPool(ctx, pool)
 	k.SetValidatorByPowerIndex(ctx, validator)
 	return validator, addedShares
+}
+
+func (k Keeper) AddValidatorTokens(ctx sdk.Context, validator types.Validator,
+	tokensToAdd sdk.Int) (valOut types.Validator) {
+
+	k.DeleteValidatorByPowerIndex(ctx, validator)
+	pool := k.GetPool(ctx)
+	validator, pool, _ = validator.AddTokensFromDel(pool, tokensToAdd)
+
+	k.SetValidator(ctx, validator)
+	k.SetPool(ctx, pool)
+	k.SetValidatorByPowerIndex(ctx, validator)
+	return validator
 }
 
 // Update the tokens of an existing validator, update the validators power index key

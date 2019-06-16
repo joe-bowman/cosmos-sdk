@@ -26,7 +26,7 @@ func (msg MsgSetWithdrawAddress) Type() string  { return "set_withdraw_address" 
 
 // Return address that must sign over msg.GetSignBytes()
 func (msg MsgSetWithdrawAddress) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{sdk.AccAddress(msg.DelegatorAddress)}
+	return []sdk.AccAddress{msg.DelegatorAddress}
 }
 
 // get the bytes for the message signer to sign on
@@ -64,7 +64,7 @@ func (msg MsgWithdrawDelegatorReward) Type() string  { return "withdraw_delegato
 
 // Return address that must sign over msg.GetSignBytes()
 func (msg MsgWithdrawDelegatorReward) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{sdk.AccAddress(msg.DelegatorAddress)}
+	return []sdk.AccAddress{msg.DelegatorAddress}
 }
 
 // get the bytes for the message signer to sign on
