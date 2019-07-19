@@ -366,18 +366,21 @@ func (v Validator) AddSharesFromDel(amount sdk.Int) (Validator, sdk.Dec) {
 	//calculate the shares to issue
 	var issuedShares sdk.Dec
 	if v.DelegatorShares.GT(sdk.ZeroDec()) {
+		// bug here. issuedShares scope is bad. we return 0
+
 		issuedShares, err := v.SharesFromTokens(amount)
-		v.DelegatorShares = v.DelegatorShares.Add(issuedShares) // having this in both branches is ridiculous _but_ go fails to compile otherwise. Which is downright daft.
 		if err != nil {
 			panic(err)
 		}
+		v.DelegatorShares = v.DelegatorShares.Add(issuedShares) // having this in both branches is ridiculous _but_ go fails to compile otherwise. Which is downright daft.
+		return v, issuedShares
 	} else {
 		// the first delegation to a validator sets the exchange rate to one
 		issuedShares = amount.ToDec()
 		v.DelegatorShares = v.DelegatorShares.Add(issuedShares)
-
+		return v, issuedShares
 	}
-	return v, issuedShares
+
 }
 
 // AddTokensFromDel adds tokens to a validator
@@ -458,6 +461,7 @@ func (v Validator) SharesFromTokens(amt sdk.Int) (sdk.Dec, sdk.Error) {
 	if v.Tokens.IsZero() {
 		return sdk.ZeroDec(), ErrInsufficientShares(DefaultCodespace)
 	}
+
 	return amt.ToDec().Quo(v.GetSharesConversionRate()), nil
 }
 

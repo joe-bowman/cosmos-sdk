@@ -126,8 +126,8 @@ func (k Keeper) AddValidatorTokensAndShares(ctx sdk.Context, validator types.Val
 
 	k.DeleteValidatorByPowerIndex(ctx, validator)
 	pool := k.GetPool(ctx)
-	validator, pool, _ = validator.AddTokensFromDel(pool, tokensToAdd)
 	validator, addedShares = validator.AddSharesFromDel(tokensToAdd)
+	validator, pool, _ = validator.AddTokensFromDel(pool, tokensToAdd)
 
 	k.SetValidator(ctx, validator)
 	k.SetPool(ctx, pool)
