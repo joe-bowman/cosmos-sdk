@@ -88,8 +88,14 @@ func (k Keeper) AllocateTokensToValidator(ctx sdk.Context, val sdk.Validator, to
 
 	// handle commission properly, then bond everything to the requisite validator!
 	// split tokens between validator and delegators according to commission
-	commission := tokens.MulDec(val.GetCommission())
-	shared := tokens.Sub(commission)
+
+	// split tokens into bondDenomTokens and nonBondDenomTokens
+	bondDenomTokens := tokens.Intersect(sdk.DecCoins{{k.stakingKeeper.GetParams(ctx).BondDenom, sdk.OneDec()}})
+	nonBondDenomTokens := tokens.Except(sdk.DecCoins{{k.stakingKeeper.GetParams(ctx).BondDenom, sdk.OneDec()}})
+
+	commission := bondDenomTokens.MulDec(val.GetCommission())
+	// nonBondDenomTokens commission handled post-auction
+	shared := bondDenomTokens.Sub(commission)
 
 	// update current commission
 	currentCommission := k.GetValidatorAccumulatedCommission(ctx, val.GetOperator())
@@ -100,6 +106,7 @@ func (k Keeper) AllocateTokensToValidator(ctx sdk.Context, val sdk.Validator, to
 		// huge massive caveat; at this point in time, we ignore any non baseDenom tokens.
 		// TODO: don't do this, it sucks.
 		k.stakingKeeper.AddValidatorTokens(ctx, staking.ValidatorFromSdkValidator(val), shared.AmountOf(k.stakingKeeper.GetParams(ctx).BondDenom).TruncateInt())
+		k.stakingKeeper.AddFeesToAuctionPool(ctx, staking.ValidatorFromSdkValidator(val), nonBondDenomTokens)
 	} else {
 		fmt.Println("Well this is shit...")
 	}
