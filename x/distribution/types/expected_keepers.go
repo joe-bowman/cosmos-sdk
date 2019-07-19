@@ -13,8 +13,9 @@ type StakingKeeper interface {
 	GetLastTotalPower(ctx sdk.Context) sdk.Int
 	GetLastValidatorPower(ctx sdk.Context, valAddr sdk.ValAddress) int64
 	AddValidatorTokens(ctx sdk.Context, validator staking.Validator,
-		tokensToAdd sdk.Int) (valOut staking.Validator)
+		tokensToAdd sdk.Int) staking.Validator
 	GetParams(ctx sdk.Context) staking.Params
+	AddFeesToAuctionPool(ctx sdk.Context, validator staking.Validator, coins sdk.DecCoins) staking.Validator
 
 	// used for invariants
 	IterateValidators(ctx sdk.Context,

@@ -131,11 +131,12 @@ func (v Validator) String() string {
   Minimum Self Delegation:    %v
   Commission:                 %s
   Shares Prefix:              %s
-  Shares Conversion Rate:     %v`, v.OperatorAddress, bechConsPubKey,
+  Shares Conversion Rate:     %v
+	Fee Pool:                   %v`, v.OperatorAddress, bechConsPubKey,
 		v.Jailed, v.Status, v.Tokens,
 		v.DelegatorShares, v.Description,
 		v.UnbondingHeight, v.UnbondingCompletionTime, v.MinSelfDelegation,
-		v.Commission, v.SharesDenomPrefix, v.Tokens.ToDec().Quo(v.DelegatorShares))
+		v.Commission, v.SharesDenomPrefix, v.GetSharesConversionRate(), v.GetFeePool())
 }
 
 // this is a helper struct used for JSON de- and encoding only
