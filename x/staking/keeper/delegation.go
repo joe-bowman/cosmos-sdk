@@ -437,25 +437,14 @@ func (k Keeper) Delegate(ctx sdk.Context, delAddr sdk.AccAddress, bondAmt sdk.In
 			return sdk.Dec{}, err
 		}
 	}
-	// TODO: second arg below is change. truncate decimal part of share. how do we handle this. it'll be dust, but needs to be accounted for otherwise break invariants.
-	// award dust to validator.
-	fmt.Printf("Tokens: %s\n", validator.GetBondedTokens().String())
-	fmt.Printf("Rate: %s\n", validator.GetSharesConversionRate().String())
 
 	validator, newShares = k.AddValidatorTokensAndShares(ctx, validator, bondAmt)
-	fmt.Printf("New Shares: %f", newShares)
 	sharesCoin := sdk.NewCoin(sharesDenomName, newShares.TruncateInt())
 
 	_, _, err = k.bankKeeper.AddCoins(ctx, delAddr, sdk.Coins{sharesCoin})
 	if err != nil {
 		return sdk.Dec{}, err
 	}
-
-	// didn't update the below. seems sane.
-
-	// Update delegation
-	//delegation.Shares = delegation.Shares.Add(newShares)
-	//k.SetDelegation(ctx, delegation)
 
 	// Call the after-modification hook
 	k.AfterDelegationModified(ctx, delAddr, validator.OperatorAddress)
@@ -505,12 +494,6 @@ func (k Keeper) unbond(ctx sdk.Context, delAddr sdk.AccAddress, valAddr sdk.ValA
 		validator = k.mustGetValidator(ctx, validator.OperatorAddress)
 	}
 
-	// remove the delegation
-	//if delegation.Shares.IsZero() {
-	//	k.RemoveDelegation(ctx, delegation)
-	//} else {
-	//	k.SetDelegation(ctx, delegation)
-	// call the after delegation modification hook
 	// d we need to still call these hooks???
 	k.AfterDelegationModified(ctx, delAddr, valAddr)
 	//}
