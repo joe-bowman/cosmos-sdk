@@ -256,6 +256,37 @@ func TestDecCoinsIntersect(t *testing.T) {
 	}
 }
 
+func TestDecCoinsExcept(t *testing.T) {
+	testCases := []struct {
+		input1         string
+		input2         string
+		expectedResult string
+	}{
+		{"", "", ""},
+		{"1.0stake", "", "1.0stake"},
+		{"1.0stake", "1.0stake", ""},
+		{"", "1.0stake", ""},
+		{"1.0stake", "", "1.0stake"},
+		{"2.0stake,1.0trope", "1.9stake", "1.0trope"},
+		{"2.0stake,1.0trope", "2.1stake", "1.0trope"},
+		{"2.0stake,1.0trope", "0.9trope", "2.0stake"},
+		{"2.0stake,1.0trope", "1.9stake,0.9trope", ""},
+		{"2.0stake,1.0trope", "1.9stake,0.9trope,20.0other", ""},
+		{"2.0stake,1.0trope", "1.0other", "2.0stake,1.0trope"},
+	}
+
+	for i, tc := range testCases {
+		in1, err := ParseDecCoins(tc.input1)
+		require.NoError(t, err, "unexpected parse error in %v", i)
+		in2, err := ParseDecCoins(tc.input2)
+		require.NoError(t, err, "unexpected parse error in %v", i)
+		exr, err := ParseDecCoins(tc.expectedResult)
+		require.NoError(t, err, "unexpected parse error in %v", i)
+
+		require.True(t, in1.Except(in2).IsEqual(exr), "in1.cap(in2) != exr in %v (%v, %v, %v == %v)", i, in1, in2, exr, in1.Except(in2))
+	}
+}
+
 func TestDecCoinsTruncateDecimal(t *testing.T) {
 	decCoinA := NewDecCoinFromDec("bar", MustNewDecFromStr("5.41"))
 	decCoinB := NewDecCoinFromDec("foo", MustNewDecFromStr("6.00"))

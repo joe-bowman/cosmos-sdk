@@ -297,6 +297,17 @@ func (coins DecCoins) Intersect(coinsB DecCoins) DecCoins {
 	return removeZeroDecCoins(res)
 }
 
+// Except will return a new set of coins containing DecCoins existing in
+// `coins` but are _not_ to be found in `coinsB`.
+func (coins DecCoins) Except(coinsB DecCoins) DecCoins {
+	for _, coin := range coinsB {
+		amount := coins.AmountOf(coin.Denom)
+		coinsToSub := DecCoins{{coin.Denom, amount}}
+		coins = coins.Sub(coinsToSub)
+	}
+	return removeZeroDecCoins(coins)
+}
+
 // IsAnyNegative returns true if there is at least one coin whose amount
 // is negative; returns false otherwise. It returns false if the DecCoins set
 // is empty too.
