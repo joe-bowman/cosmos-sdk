@@ -7,8 +7,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/utils"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auction"
 	authtxb "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
-	"github.com/kava-labs/kava-devnet/blockchain/x/auction"
 	"github.com/spf13/cobra"
 )
 
@@ -47,7 +47,7 @@ func GetCmdPlaceBid(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 			cliCtx.PrintResponse = true
-			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
+			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg}, false)
 		},
 	}
 }

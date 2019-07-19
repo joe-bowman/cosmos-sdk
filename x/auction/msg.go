@@ -7,7 +7,7 @@ type MsgPlaceBid struct {
 	AuctionID ID
 	Bidder    sdk.AccAddress // This can be a buyer (who increments bid), or a seller (who decrements lot) TODO rename to be clearer?
 	Bid       sdk.Coin
-	Lot       sdk.Coin
+	//Lot       sdk.Coin
 }
 
 // NewMsgPlaceBid returns a new MsgPlaceBid.
@@ -16,7 +16,7 @@ func NewMsgPlaceBid(auctionID ID, bidder sdk.AccAddress, bid sdk.Coin, lot sdk.C
 		AuctionID: auctionID,
 		Bidder:    bidder,
 		Bid:       bid,
-		Lot:       lot,
+		//Lot:       lot,
 	}
 }
 
@@ -34,9 +34,9 @@ func (msg MsgPlaceBid) ValidateBasic() sdk.Error {
 	if msg.Bid.Amount.LT(sdk.ZeroInt()) {
 		return sdk.ErrInternal("invalid (negative) bid amount")
 	}
-	if msg.Lot.Amount.LT(sdk.ZeroInt()) {
+	/*if msg.Lot.Amount.LT(sdk.ZeroInt()) {
 		return sdk.ErrInternal("invalid (negative) lot amount")
-	}
+	}*/
 	// TODO check coin denoms
 	return nil
 }

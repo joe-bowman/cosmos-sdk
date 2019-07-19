@@ -9,17 +9,20 @@ import (
 )
 
 var (
-	_ sdk.AppModule      = AppModule{}
-	_ sdk.AppModuleBasic = AppModuleBasic{}
+//_ sdk.AppModule      = AppModule{}
+//_ sdk.AppModuleBasic = AppModuleBasic{}
 )
 
 //  ModuleName name of module
-const ModuleName = "auction"
+const (
+	ModuleName = "auction"
+	RouterKey  = ModuleName
+)
 
 // AppModuleBasic app module basics object
 type AppModuleBasic struct{}
 
-var _ sdk.AppModuleBasic = AppModuleBasic{}
+//var _ sdk.AppModuleBasic = AppModuleBasic{}
 
 // Name get module name
 func (AppModuleBasic) Name() string {
@@ -61,7 +64,7 @@ func (AppModule) Name() string {
 }
 
 // RegisterInvariants register module invariants
-func (AppModule) RegisterInvariants(_ sdk.InvariantRouter) {}
+//func (AppModule) RegisterInvariants(_ sdk.InvariantRouter) {}
 
 // Route module message route name
 func (AppModule) Route() string {

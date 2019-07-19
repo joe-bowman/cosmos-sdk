@@ -2,7 +2,7 @@ package client
 
 import (
 	"github.com/cosmos/cosmos-sdk/client"
-	auctioncmd "github.com/kava-labs/kava-devnet/blockchain/x/auction/client/cli"
+	auctioncmd "github.com/cosmos/cosmos-sdk/x/auction/client/cli"
 	"github.com/spf13/cobra"
 	amino "github.com/tendermint/go-amino"
 )

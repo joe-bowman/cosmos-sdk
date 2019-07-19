@@ -21,6 +21,6 @@ func RegisterCodec(cdc *codec.Codec) {
 	// Register the Auction interface and concrete types
 	cdc.RegisterInterface((*Auction)(nil), nil)
 	cdc.RegisterConcrete(&ForwardAuction{}, "auction/ForwardAuction", nil)
-	cdc.RegisterConcrete(&ReverseAuction{}, "auction/ReverseAuction", nil)
-	cdc.RegisterConcrete(&ForwardReverseAuction{}, "auction/ForwardReverseAuction", nil)
+	//cdc.RegisterConcrete(&ReverseAuction{}, "auction/ReverseAuction", nil)
+	//cdc.RegisterConcrete(&ForwardReverseAuction{}, "auction/ForwardReverseAuction", nil)
 }

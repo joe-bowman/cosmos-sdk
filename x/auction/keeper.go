@@ -8,6 +8,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
+const (
+	// StoreKey is the string key for the params store
+	StoreKey = "auction"
+)
+
 type Keeper struct {
 	bankKeeper bankKeeper
 	storeKey   sdk.StoreKey
@@ -27,11 +32,11 @@ func NewKeeper(cdc *codec.Codec, bankKeeper bankKeeper, storeKey sdk.StoreKey) K
 // TODO these 3 start functions be combined or abstracted away?
 
 // StartForwardAuction starts a normal auction. Known as flap in maker.
-func (k Keeper) StartForwardAuction(ctx sdk.Context, seller sdk.AccAddress, lot sdk.Coin, initialBid sdk.Coin) (ID, sdk.Error) {
+func (k Keeper) StartForwardAuction(ctx sdk.Context, valAddr sdk.ValAddress, lot sdk.Coin, initialBid sdk.Coin) (ID, sdk.Error) {
 	// create auction
-	auction, initiatorOutput := NewForwardAuction(seller, lot, initialBid, endTime(ctx.BlockHeight())+MaxAuctionDuration)
+	auction := NewForwardAuction(valAddr, lot, initialBid, ctx.BlockHeight()+MaxAuctionDuration)
 	// start the auction
-	auctionID, err := k.startAuction(ctx, &auction, initiatorOutput)
+	auctionID, err := k.startAuction(ctx, &auction)
 	if err != nil {
 		return 0, err
 	}
@@ -39,7 +44,7 @@ func (k Keeper) StartForwardAuction(ctx sdk.Context, seller sdk.AccAddress, lot 
 }
 
 // StartReverseAuction starts an auction where sellers compete by offering decreasing prices. Known as flop in maker.
-func (k Keeper) StartReverseAuction(ctx sdk.Context, buyer sdk.AccAddress, bid sdk.Coin, initialLot sdk.Coin) (ID, sdk.Error) {
+/*func (k Keeper) StartReverseAuction(ctx sdk.Context, buyer sdk.AccAddress, bid sdk.Coin, initialLot sdk.Coin) (ID, sdk.Error) {
 	// create auction
 	auction, initiatorOutput := NewReverseAuction(buyer, bid, initialLot, endTime(ctx.BlockHeight())+MaxAuctionDuration)
 	// start the auction
@@ -48,10 +53,10 @@ func (k Keeper) StartReverseAuction(ctx sdk.Context, buyer sdk.AccAddress, bid s
 		return 0, err
 	}
 	return auctionID, nil
-}
+}*/
 
 // StartForwardReverseAuction starts an auction where bidders bid up to a maxBid, then switch to bidding down on price. Known as flip in maker.
-func (k Keeper) StartForwardReverseAuction(ctx sdk.Context, seller sdk.AccAddress, lot sdk.Coin, maxBid sdk.Coin, otherPerson sdk.AccAddress) (ID, sdk.Error) {
+/*func (k Keeper) StartForwardReverseAuction(ctx sdk.Context, seller sdk.AccAddress, lot sdk.Coin, maxBid sdk.Coin, otherPerson sdk.AccAddress) (ID, sdk.Error) {
 	// create auction
 	initialBid := sdk.NewInt64Coin(maxBid.Denom, 0) // set the bidding coin denomination from the specified max bid
 	auction, initiatorOutput := NewForwardReverseAuction(seller, lot, initialBid, endTime(ctx.BlockHeight())+MaxAuctionDuration, maxBid, otherPerson)
@@ -61,9 +66,9 @@ func (k Keeper) StartForwardReverseAuction(ctx sdk.Context, seller sdk.AccAddres
 		return 0, err
 	}
 	return auctionID, nil
-}
+}*/
 
-func (k Keeper) startAuction(ctx sdk.Context, auction Auction, initiatorOutput bankOutput) (ID, sdk.Error) {
+func (k Keeper) startAuction(ctx sdk.Context, auction Auction) (ID, sdk.Error) {
 	// get ID
 	newAuctionID, err := k.getNextAuctionID(ctx)
 	if err != nil {
@@ -72,12 +77,6 @@ func (k Keeper) startAuction(ctx sdk.Context, auction Auction, initiatorOutput b
 	// set ID
 	auction.SetID(newAuctionID)
 
-	// subtract coins from initiator
-	_, err = k.bankKeeper.SubtractCoins(ctx, initiatorOutput.Address, sdk.NewCoins(initiatorOutput.Coin))
-	if err != nil {
-		return 0, err
-	}
-
 	// store auction
 	k.setAuction(ctx, auction)
 	k.incrementNextAuctionID(ctx)
@@ -85,7 +84,7 @@ func (k Keeper) startAuction(ctx sdk.Context, auction Auction, initiatorOutput b
 }
 
 // PlaceBid places a bid on any auction.
-func (k Keeper) PlaceBid(ctx sdk.Context, auctionID ID, bidder sdk.AccAddress, bid sdk.Coin, lot sdk.Coin) sdk.Error {
+func (k Keeper) PlaceBid(ctx sdk.Context, auctionID ID, bidder sdk.AccAddress, bid sdk.Coin) sdk.Error {
 
 	// get auction from store
 	auction, found := k.GetAuction(ctx, auctionID)
@@ -94,25 +93,25 @@ func (k Keeper) PlaceBid(ctx sdk.Context, auctionID ID, bidder sdk.AccAddress, b
 	}
 
 	// place bid
-	coinOutputs, coinInputs, err := auction.PlaceBid(endTime(ctx.BlockHeight()), bidder, lot, bid) // update auction according to what type of auction it is // TODO should this return updated Auction to be more immutable?
+	err := auction.PlaceBid(ctx.BlockHeight(), bidder, bid) // update auction according to what type of auction it is // TODO should this return updated Auction to be more immutable?
 	if err != nil {
 		return err
 	}
 	// TODO this will fail if someone tries to update their bid without the full bid amount sitting in their account
 	// sub outputs
-	for _, output := range coinOutputs {
-		_, err = k.bankKeeper.SubtractCoins(ctx, output.Address, sdk.NewCoins(output.Coin)) // TODO handle errors properly here. All coin transfers should be atomic. InputOutputCoins may work
-		if err != nil {
-			panic(err)
-		}
-	}
+	// for _, output := range coinOutputs {
+	// 	_, err = k.bankKeeper.SubtractCoins(ctx, output.Address, sdk.NewCoins(output.Coin)) // TODO handle errors properly here. All coin transfers should be atomic. InputOutputCoins may work
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// }
 	// add inputs
-	for _, input := range coinInputs {
-		_, err = k.bankKeeper.AddCoins(ctx, input.Address, sdk.NewCoins(input.Coin)) // TODO errors
-		if err != nil {
-			panic(err)
-		}
-	}
+	// for _, input := range coinInputs {
+	// 	_, err = k.bankKeeper.AddCoins(ctx, input.Address, sdk.NewCoins(input.Coin)) // TODO errors
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// }
 
 	// store updated auction
 	k.setAuction(ctx, auction)
@@ -130,15 +129,16 @@ func (k Keeper) CloseAuction(ctx sdk.Context, auctionID ID) sdk.Error {
 		return sdk.ErrInternal("auction doesn't exist")
 	}
 	// error if auction has not reached the end time
-	if ctx.BlockHeight() < int64(auction.GetEndTime()) { // auctions close at the end of the block with blockheight == EndTime
+	if ctx.BlockHeight() < auction.GetEndTime() { // auctions close at the end of the block with blockheight == EndTime
 		return sdk.ErrInternal(fmt.Sprintf("auction can't be closed as curent block height (%v) is under auction end time (%v)", ctx.BlockHeight(), auction.GetEndTime()))
 	}
+	// TODO.....
 	// payout to the last bidder
-	coinInput := auction.GetPayout()
-	_, err := k.bankKeeper.AddCoins(ctx, coinInput.Address, sdk.NewCoins(coinInput.Coin))
-	if err != nil {
-		return err
-	}
+	//coinInput := auction.GetPayout()
+	//_, err := k.bankKeeper.AddCoins(ctx, coinInput.Address, sdk.NewCoins(coinInput.Coin))
+	//if err != nil {
+	//	return err
+	//}
 
 	// delete auction from store (and queue)
 	k.deleteAuction(ctx, auctionID)
@@ -241,7 +241,7 @@ func (k Keeper) getAuctionKey(auctionID ID) []byte {
 }
 
 // Inserts a AuctionID into the queue at endTime
-func (k Keeper) insertIntoQueue(ctx sdk.Context, endTime endTime, auctionID ID) {
+func (k Keeper) insertIntoQueue(ctx sdk.Context, endTime int64, auctionID ID) {
 	// get the store
 	store := ctx.KVStore(k.storeKey)
 	// marshal thing to be inserted
@@ -254,13 +254,13 @@ func (k Keeper) insertIntoQueue(ctx sdk.Context, endTime endTime, auctionID ID) 
 }
 
 // removes an auctionID from the queue
-func (k Keeper) removeFromQueue(ctx sdk.Context, endTime endTime, auctionID ID) {
+func (k Keeper) removeFromQueue(ctx sdk.Context, endTime int64, auctionID ID) {
 	store := ctx.KVStore(k.storeKey)
 	store.Delete(getQueueElementKey(endTime, auctionID))
 }
 
 // Returns an iterator for all the auctions in the queue that expire by endTime
-func (k Keeper) getQueueIterator(ctx sdk.Context, endTime endTime) sdk.Iterator { // TODO rename to "getAuctionsByExpiry" ?
+func (k Keeper) getQueueIterator(ctx sdk.Context, endTime int64) sdk.Iterator { // TODO rename to "getAuctionsByExpiry" ?
 	// get store
 	store := ctx.KVStore(k.storeKey)
 	// get an interator
@@ -280,7 +280,7 @@ var queueKeyPrefix = []byte("queue")
 var keyDelimiter = []byte(":")
 
 // Returns half a key for an auctionID in the queue, it missed the id off the end
-func getQueueElementKeyPrefix(endTime endTime) []byte {
+func getQueueElementKeyPrefix(endTime int64) []byte {
 	return bytes.Join([][]byte{
 		queueKeyPrefix,
 		sdk.Uint64ToBigEndian(uint64(endTime)), // TODO check this gives correct ordering
@@ -288,7 +288,7 @@ func getQueueElementKeyPrefix(endTime endTime) []byte {
 }
 
 // Returns the key for an auctionID in the queue
-func getQueueElementKey(endTime endTime, auctionID ID) []byte {
+func getQueueElementKey(endTime int64, auctionID ID) []byte {
 	return bytes.Join([][]byte{
 		queueKeyPrefix,
 		sdk.Uint64ToBigEndian(uint64(endTime)), // TODO check this gives correct ordering
