@@ -23,6 +23,8 @@ func NewHandler(k keeper.Keeper) sdk.Handler {
 			return handleMsgEditValidator(ctx, msg, k)
 		case types.MsgDelegate:
 			return handleMsgDelegate(ctx, msg, k)
+		case types.MsgIndexDelegate:
+			return handleMsgIndexDelegate(ctx, msg, k)
 		case types.MsgBeginRedelegate:
 			return handleMsgBeginRedelegate(ctx, msg, k)
 		case types.MsgUndelegate:
@@ -218,6 +220,51 @@ func handleMsgDelegate(ctx sdk.Context, msg types.MsgDelegate, k keeper.Keeper) 
 		return err.Result()
 	}
 
+	tags := sdk.NewTags(
+		tags.Delegator, msg.DelegatorAddress.String(),
+		tags.DstValidator, msg.ValidatorAddress.String(),
+	)
+
+	return sdk.Result{
+		Tags: tags,
+	}
+}
+
+func handleMsgIndexDelegate(
+	ctx sdk.Context,
+	msg types.MsgIndexDelegate,
+	k keeper.Keeper,
+) sdk.Result {
+	// For Each Validator We're Delegating To, validate that the
+	// Validator is valid and the denomination is correct.
+	for validatorAddress := range msg.portions {
+		validator, found := k.GetValidator(ctx, msg.ValidatorAddress)
+		if !found {
+			return ErrNoValidatorFound(k.Codespace()).Result()
+		}
+
+		// Validate Denominations and Delegate
+		for portion := range msg.portions {
+			if portion.Amount.Denom != k.GetParams(ctx).BondDenom {
+				return ErrBadDenom(k.Codespace()).Result()
+			}
+		}
+	}
+
+	_, err := k.DelegateIndex(
+		ctx,
+		msg.DelegatorAddress,
+		msg.Portions,
+		msg.Denomination,
+		validator,
+		true,
+	)
+
+	if err != nil {
+		return err.Result()
+	}
+
+	// HACKATOM TODO: FIX THIS TAGGING
 	tags := sdk.NewTags(
 		tags.Delegator, msg.DelegatorAddress.String(),
 		tags.DstValidator, msg.ValidatorAddress.String(),

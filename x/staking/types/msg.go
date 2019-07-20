@@ -233,6 +233,50 @@ func NewMsgDelegate(delAddr sdk.AccAddress, valAddr sdk.ValAddress, amount sdk.C
 	}
 }
 
+// HACKATOM: Create New Message for Index Delegrations
+// -----------------------------------------------------------------------------
+type ValidatorPortion struct {
+	ValidatorAddress sdk.ValAddress `json:"validator_address"`
+	Amount           sdk.Coin       `json:"amount"`
+}
+
+type MsgIndexDelegate struct {
+	DelegatorAddress sdk.AccAddress     `json:"delegator_address"`
+	Portions         []ValidatorPortion `json:"validator_portion"`
+	Denomination     String             `json:"denomination"`
+}
+
+func (msg MsgIndexDelegate) Route() string { return RouterKey }
+func (msg MsgIndexDelegate) Type() string  { return "index_delegate" }
+func (msg MsgIndexDelegate) GetSigners() []sdk.AccAddress {
+	return []sdk.AccAddress{msg.DelegatorAddress}
+}
+
+// get the bytes for the message signer to sign on
+func (msg MsgIndexDelegate) GetSignBytes() []byte {
+	bz := MsgCdc.MustMarshalJSON(msg)
+	return sdk.MustSortJSON(bz)
+}
+
+// quick validity check
+func (msg MsgIndexDelegate) ValidateBasic() sdk.Error {
+	if msg.DelegatorAddress.Empty() {
+		return ErrNilDelegatorAddr(DefaultCodespace)
+	}
+	for portion := range msg.Portions {
+		if portion.ValidatorAddress.Empty() {
+			return ErrNilValidatorAddr(DefaultCodespace)
+		}
+		if portion.Amount.Amount.LTE(sdk.ZeroInt()) {
+			return ErrBadDelegationAmount(DefaultCodespace)
+		}
+	}
+	return nil
+}
+
+// HACKATOM END
+// -----------------------------------------------------------------------------
+
 //nolint
 func (msg MsgDelegate) Route() string { return RouterKey }
 func (msg MsgDelegate) Type() string  { return "delegate" }
