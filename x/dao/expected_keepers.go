@@ -9,3 +9,9 @@ type BankKeeper interface {
 	// TODO remove once governance doesn't require use of accounts
 	SendCoins(ctx sdk.Context, fromAddr sdk.AccAddress, toAddr sdk.AccAddress, amt sdk.Coins) (sdk.Tags, sdk.Error)
 }
+
+type StakeKeeper interface {
+	// TODO: TBD
+	// Rebalancing
+	// get total supply of index denom , etc
+}

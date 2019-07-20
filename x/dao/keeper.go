@@ -36,6 +36,8 @@ var (
 	// TODO: Find another way to implement this without using accounts, or find a cleaner way to implement it using accounts.
 	DepositedCoinsAccAddr     = sdk.AccAddress(crypto.AddressHash([]byte("daoDepositedCoins")))
 	BurnedDepositCoinsAccAddr = sdk.AccAddress(crypto.AddressHash([]byte("daoBurnedDepositCoins")))
+	StakedCoinsAccAddr        = sdk.AccAddress(crypto.AddressHash([]byte("daoStakedCoins")))
+	// TODO: using StakedCoinsAccAddr for keep stake
 )
 
 // Key declaration for parameters
@@ -58,11 +60,8 @@ type Keeper struct {
 	// The reference to the CoinKeeper to modify balances
 	ck BankKeeper
 
-	// The ValidatorSet to get information about validators
-	vs sdk.ValidatorSet
-
-	// The reference to the DelegationSet to get information about delegators
-	ds sdk.DelegationSet
+	// need StakeKeeper for Rebalancing Call
+	sk StakeKeeper
 
 	// The (unexposed) keys used to access the stores from the Context.
 	storeKey sdk.StoreKey
@@ -80,15 +79,14 @@ type Keeper struct {
 // - users voting on proposals, with weight proportional to stake in the system
 // - and tallying the result of the vote.
 func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, paramsKeeper params.Keeper,
-	paramSpace params.Subspace, ck BankKeeper, ds sdk.DelegationSet, codespace sdk.CodespaceType) Keeper {
+	paramSpace params.Subspace, ck BankKeeper, sk StakeKeeper, codespace sdk.CodespaceType) Keeper {
 
 	return Keeper{
 		storeKey:     key,
 		paramsKeeper: paramsKeeper,
 		paramSpace:   paramSpace.WithKeyTable(ParamKeyTable()),
 		ck:           ck,
-		ds:           ds,
-		vs:           ds.GetValidatorSet(),
+		sk:           sk,
 		cdc:          cdc,
 		codespace:    codespace,
 	}

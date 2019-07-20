@@ -177,6 +177,7 @@ func testQueryParams(t *testing.T) {
 	getQueriedParams(t, ctx, cdc, querier)
 }
 
+// TODO: TBD debugging after dao spec complete
 func testQueries(t *testing.T) {
 	cdc := codec.New()
 	mapp, keeper, _, addrs, _, _ := getMockApp(t, 1000, GenesisState{}, nil)
