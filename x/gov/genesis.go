@@ -11,8 +11,6 @@ import (
 const (
 	// Default period for deposits & voting
 	DefaultPeriod time.Duration = 86400 * 2 * time.Second // 2 days
-	DefaultPeriodRebalancing time.Duration = 86400 * 2 * time.Second // 2 days
-	// TODO: DefaultPeriodRebalancing
 )
 
 // GenesisState - all staking state that must be provided at genesis
@@ -24,7 +22,6 @@ type GenesisState struct {
 	DepositParams      DepositParams         `json:"deposit_params"`
 	VotingParams       VotingParams          `json:"voting_params"`
 	TallyParams        TallyParams           `json:"tally_params"`
-	RebalanceTallyParams        RebalancingTallyParams           `json:"rebalancing_tally_params"`
 }
 
 // DepositWithMetadata (just for genesis)
