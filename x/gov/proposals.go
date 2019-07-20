@@ -121,7 +121,6 @@ const (
 	ProposalTypeText            ProposalKind = 0x01
 	ProposalTypeParameterChange ProposalKind = 0x02
 	ProposalTypeSoftwareUpgrade ProposalKind = 0x03
-	ProposalTypeRebalancing ProposalKind = 0x04
 )
 
 // String to proposalType byte. Returns 0xff if invalid.
