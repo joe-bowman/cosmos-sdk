@@ -24,11 +24,13 @@ type (
 	UnbondingDelegations    = types.UnbondingDelegations
 	Redelegation            = types.Redelegation
 	Redelegations           = types.Redelegations
+	ValidatorPortion        = types.ValidatorPortion
 	Params                  = types.Params
 	Pool                    = types.Pool
 	MsgCreateValidator      = types.MsgCreateValidator
 	MsgEditValidator        = types.MsgEditValidator
 	MsgDelegate             = types.MsgDelegate
+	MsgIndexDelegate        = types.MsgIndexDelegate
 	MsgUndelegate           = types.MsgUndelegate
 	MsgBeginRedelegate      = types.MsgBeginRedelegate
 	GenesisState            = types.GenesisState

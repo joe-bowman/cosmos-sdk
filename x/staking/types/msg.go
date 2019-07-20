@@ -243,7 +243,7 @@ type ValidatorPortion struct {
 type MsgIndexDelegate struct {
 	DelegatorAddress sdk.AccAddress     `json:"delegator_address"`
 	Portions         []ValidatorPortion `json:"validator_portion"`
-	Denomination     String             `json:"denomination"`
+	Denomination     string             `json:"denomination"`
 }
 
 func (msg MsgIndexDelegate) Route() string { return RouterKey }
@@ -263,7 +263,7 @@ func (msg MsgIndexDelegate) ValidateBasic() sdk.Error {
 	if msg.DelegatorAddress.Empty() {
 		return ErrNilDelegatorAddr(DefaultCodespace)
 	}
-	for portion := range msg.Portions {
+	for _, portion := range msg.Portions {
 		if portion.ValidatorAddress.Empty() {
 			return ErrNilValidatorAddr(DefaultCodespace)
 		}

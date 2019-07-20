@@ -145,7 +145,7 @@ $ gaiacli tx staking delegate cosmosvaloper1l2rsakp388kuv9k8qzq6lrm9taddae7fpx59
 				Denomination:     "",
 				DelegatorAddress: delAddr,
 				Portions: []staking.ValidatorPortion{
-					ValidatorPortion{valAddr, amount},
+					staking.ValidatorPortion{valAddr, amount},
 				},
 			}
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg}, false)
