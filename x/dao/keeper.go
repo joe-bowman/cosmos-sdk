@@ -458,6 +458,8 @@ func (keeper Keeper) DeleteDeposits(ctx sdk.Context, proposalID uint64) {
 	}
 }
 
+// TODO: add Lock as Vote like Deposit
+
 // ProposalQueues
 
 // Returns an iterator for all the proposals in the Active Queue that expire by endTime

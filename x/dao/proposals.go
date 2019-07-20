@@ -16,6 +16,9 @@ type Proposal struct {
 
 	ProposalID uint64 `json:"proposal_id"` //  ID of the proposal
 
+	Denom string `json:"denom"` // denom for DAO Proposal
+	TotalStake		sdk.Coin  // for DAO voting, need to staking for prevent double voting
+
 	Status           ProposalStatus `json:"proposal_status"`    //  Status of the Proposal {Pending, Active, Passed, Rejected}
 	FinalTallyResult TallyResult    `json:"final_tally_result"` //  Result of Tallys
 
@@ -113,7 +116,6 @@ func ProposalTypeFromString(str string) (ProposalKind, error) {
 		return ProposalTypeText, nil
 	case "Rebalancing":
 		return ProposalTypeRebalancing, nil
-	// TODO: add case rebalancing
 	default:
 		return ProposalKind(0xff), fmt.Errorf("'%s' is not a valid proposal type", str)
 	}
