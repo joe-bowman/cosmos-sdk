@@ -159,14 +159,19 @@ func NewGaiaApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest b
 		app.feeCollectionKeeper,
 	)
 
-	app.auctionKeeper = auction.NewKeeper(app.cdc, app.bankKeeper, app.keyAuction)
-
 	// register the staking hooks
 	// NOTE: The stakingKeeper above is passed by reference, so that it can be
 	// modified like below:
 	app.stakingKeeper = *stakingKeeper.SetHooks(
 		NewStakingHooks(app.distrKeeper.Hooks(), app.slashingKeeper.Hooks()),
 	)
+
+	app.auctionKeeper = auction.NewKeeper(
+		app.cdc,
+		app.bankKeeper,
+		app.stakingKeeper,
+		app.paramsKeeper,
+		app.keyAuction)
 
 	// register the crisis routes
 	bank.RegisterInvariants(&app.crisisKeeper, app.accountKeeper)
@@ -222,8 +227,10 @@ func MakeCodec() *codec.Codec {
 	gov.RegisterCodec(cdc)
 	auth.RegisterCodec(cdc)
 	crisis.RegisterCodec(cdc)
+	auction.RegisterCodec(cdc)
 	sdk.RegisterCodec(cdc)
 	codec.RegisterCrypto(cdc)
+
 	return cdc
 }
 

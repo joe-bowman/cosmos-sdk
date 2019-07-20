@@ -1,11 +1,11 @@
 package auction
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/params"
 )
 
 const (
@@ -14,27 +14,45 @@ const (
 )
 
 type Keeper struct {
-	bankKeeper bankKeeper
+	bankKeeper    bankKeeper
+	stakingKeeper stakingKeeper
+	// The reference to the Param Keeper to get and set Global Params
+	paramsKeeper params.Keeper
+	// The reference to the Paramstore to get and set gov specific params
+	paramSpace params.Subspace
 	storeKey   sdk.StoreKey
 	cdc        *codec.Codec
 	// TODO codespace
 }
 
+type AuctionRef struct {
+	Id      ID
+	EndTime int64
+}
+
+type AuctionRefs struct {
+	Refs []AuctionRef
+}
+
 // NewKeeper returns a new auction keeper.
-func NewKeeper(cdc *codec.Codec, bankKeeper bankKeeper, storeKey sdk.StoreKey) Keeper {
+func NewKeeper(cdc *codec.Codec, bankKeeper bankKeeper, stakingKeeper stakingKeeper,
+	paramsKeeper params.Keeper, storeKey sdk.StoreKey) Keeper {
 	return Keeper{
-		bankKeeper: bankKeeper,
-		storeKey:   storeKey,
-		cdc:        cdc,
+		bankKeeper:    bankKeeper,
+		stakingKeeper: stakingKeeper,
+		paramsKeeper:  paramsKeeper,
+		storeKey:      storeKey,
+		cdc:           cdc,
 	}
 }
 
 // TODO these 3 start functions be combined or abstracted away?
 
 // StartForwardAuction starts a normal auction. Known as flap in maker.
-func (k Keeper) StartForwardAuction(ctx sdk.Context, valAddr sdk.ValAddress, lot sdk.Coin, initialBid sdk.Coin) (ID, sdk.Error) {
+func (k Keeper) StartForwardAuction(ctx sdk.Context, lot sdk.Coin, initialBid sdk.Coin) (ID, sdk.Error) {
 	// create auction
-	auction := NewForwardAuction(valAddr, lot, initialBid, ctx.BlockHeight()+MaxAuctionDuration)
+	fmt.Printf("STARTING AUCTION FOR %s\n", lot.Denom)
+	auction := NewForwardAuction(lot, initialBid, ctx.BlockHeight()+MaxAuctionDuration)
 	// start the auction
 	auctionID, err := k.startAuction(ctx, &auction)
 	if err != nil {
@@ -42,31 +60,6 @@ func (k Keeper) StartForwardAuction(ctx sdk.Context, valAddr sdk.ValAddress, lot
 	}
 	return auctionID, nil
 }
-
-// StartReverseAuction starts an auction where sellers compete by offering decreasing prices. Known as flop in maker.
-/*func (k Keeper) StartReverseAuction(ctx sdk.Context, buyer sdk.AccAddress, bid sdk.Coin, initialLot sdk.Coin) (ID, sdk.Error) {
-	// create auction
-	auction, initiatorOutput := NewReverseAuction(buyer, bid, initialLot, endTime(ctx.BlockHeight())+MaxAuctionDuration)
-	// start the auction
-	auctionID, err := k.startAuction(ctx, &auction, initiatorOutput)
-	if err != nil {
-		return 0, err
-	}
-	return auctionID, nil
-}*/
-
-// StartForwardReverseAuction starts an auction where bidders bid up to a maxBid, then switch to bidding down on price. Known as flip in maker.
-/*func (k Keeper) StartForwardReverseAuction(ctx sdk.Context, seller sdk.AccAddress, lot sdk.Coin, maxBid sdk.Coin, otherPerson sdk.AccAddress) (ID, sdk.Error) {
-	// create auction
-	initialBid := sdk.NewInt64Coin(maxBid.Denom, 0) // set the bidding coin denomination from the specified max bid
-	auction, initiatorOutput := NewForwardReverseAuction(seller, lot, initialBid, endTime(ctx.BlockHeight())+MaxAuctionDuration, maxBid, otherPerson)
-	// start the auction
-	auctionID, err := k.startAuction(ctx, &auction, initiatorOutput)
-	if err != nil {
-		return 0, err
-	}
-	return auctionID, nil
-}*/
 
 func (k Keeper) startAuction(ctx sdk.Context, auction Auction) (ID, sdk.Error) {
 	// get ID
@@ -89,7 +82,11 @@ func (k Keeper) PlaceBid(ctx sdk.Context, auctionID ID, bidder sdk.AccAddress, b
 	// get auction from store
 	auction, found := k.GetAuction(ctx, auctionID)
 	if !found {
-		return sdk.ErrInternal("auction doesn't exist")
+		return sdk.ErrInternal("Auction doesn't exist")
+	}
+
+	if !k.bankKeeper.HasCoins(ctx, bidder, sdk.NewCoins(bid)) {
+		return sdk.ErrInternal("Insufficient funds")
 	}
 
 	// place bid
@@ -97,22 +94,24 @@ func (k Keeper) PlaceBid(ctx sdk.Context, auctionID ID, bidder sdk.AccAddress, b
 	if err != nil {
 		return err
 	}
-	// TODO this will fail if someone tries to update their bid without the full bid amount sitting in their account
-	// sub outputs
-	// for _, output := range coinOutputs {
-	// 	_, err = k.bankKeeper.SubtractCoins(ctx, output.Address, sdk.NewCoins(output.Coin)) // TODO handle errors properly here. All coin transfers should be atomic. InputOutputCoins may work
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// }
-	// add inputs
-	// for _, input := range coinInputs {
-	// 	_, err = k.bankKeeper.AddCoins(ctx, input.Address, sdk.NewCoins(input.Coin)) // TODO errors
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// }
 
+	// subtract coins from new bid
+	_, _, err = k.bankKeeper.SubtractCoins(ctx, bidder, sdk.NewCoins(bid)) // TODO handle errors properly here. All coin transfers should be atomic. InputOutputCoins may work
+	if err != nil {
+		panic(err)
+	}
+
+	if auction.GetBid().Amount.GT(sdk.ZeroInt()) { //we aren't the first bid.
+		// refund tokens to previous bidder
+		_, _, err = k.bankKeeper.AddCoins(ctx, auction.GetBidder(), sdk.NewCoins(auction.GetBid())) // TODO errors
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	// update bid and bidder
+	auction.SetBid(bid)
+	auction.SetBidder(bidder)
 	// store updated auction
 	k.setAuction(ctx, auction)
 
@@ -132,13 +131,13 @@ func (k Keeper) CloseAuction(ctx sdk.Context, auctionID ID) sdk.Error {
 	if ctx.BlockHeight() < auction.GetEndTime() { // auctions close at the end of the block with blockheight == EndTime
 		return sdk.ErrInternal(fmt.Sprintf("auction can't be closed as curent block height (%v) is under auction end time (%v)", ctx.BlockHeight(), auction.GetEndTime()))
 	}
-	// TODO.....
-	// payout to the last bidder
-	//coinInput := auction.GetPayout()
-	//_, err := k.bankKeeper.AddCoins(ctx, coinInput.Address, sdk.NewCoins(coinInput.Coin))
-	//if err != nil {
-	//	return err
-	//}
+
+	if auction.GetBid().Denom == "uatom" && auction.GetBid().Amount.GT(sdk.ZeroInt()) {
+		k.stakingKeeper.RepatriateFeeEarnings(ctx, auction.GetLot(), auction.GetBid())
+	} else {
+		k.stakingKeeper.RollOverFeesFromAuction(ctx, auction.GetLot())
+	}
+	// take the amount from auction.Bid and pass on to validator pools.
 
 	// delete auction from store (and queue)
 	k.deleteAuction(ctx, auctionID)
@@ -152,14 +151,13 @@ func (k Keeper) CloseAuction(ctx sdk.Context, auctionID ID) sdk.Error {
 // getNextAuctionID gets the next available global AuctionID
 func (k Keeper) getNextAuctionID(ctx sdk.Context) (ID, sdk.Error) { // TODO don't need error return here
 	// get next ID from store
+
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(k.getNextAuctionIDKey())
 	if bz == nil {
 		// if not found, set the id at 0
 		bz = k.cdc.MustMarshalBinaryLengthPrefixed(ID(0))
 		store.Set(k.getNextAuctionIDKey(), bz)
-		// TODO Why does the gov module set the id in genesis? :
-		//return 0, ErrInvalidGenesis(keeper.codespace, "InitialProposalID never set")
 	}
 	var auctionID ID
 	k.cdc.MustUnmarshalBinaryLengthPrefixed(bz, &auctionID)
@@ -177,7 +175,6 @@ func (k Keeper) incrementNextAuctionID(ctx sdk.Context) sdk.Error {
 	}
 	var auctionID ID
 	k.cdc.MustUnmarshalBinaryLengthPrefixed(bz, &auctionID)
-
 	// increment the stored next ID
 	bz = k.cdc.MustMarshalBinaryLengthPrefixed(auctionID + 1)
 	store.Set(k.getNextAuctionIDKey(), bz)
@@ -191,7 +188,7 @@ func (k Keeper) setAuction(ctx sdk.Context, auction Auction) {
 	// remove the auction from the queue if it is already in there
 	existingAuction, found := k.GetAuction(ctx, auction.GetID())
 	if found {
-		k.removeFromQueue(ctx, existingAuction.GetEndTime(), existingAuction.GetID())
+		k.RemoveFromList(ctx, existingAuction.GetEndTime(), existingAuction.GetID())
 	}
 
 	// store auction
@@ -200,34 +197,139 @@ func (k Keeper) setAuction(ctx sdk.Context, auction Auction) {
 	store.Set(k.getAuctionKey(auction.GetID()), bz)
 
 	// add to the queue
-	k.insertIntoQueue(ctx, auction.GetEndTime(), auction.GetID())
+	k.AddToList(ctx, auction.GetEndTime(), auction.GetID())
 }
 
-// getAuction gets an auction from the store by auctionID
+func (k Keeper) AddToList(ctx sdk.Context, endTime int64, id ID) {
+	var refs AuctionRefs
+
+	store := ctx.KVStore(k.storeKey)
+
+	bz := store.Get(k.getLiveAuctionListKey())
+	if len(bz) > 0 {
+		k.cdc.MustUnmarshalBinaryLengthPrefixed(bz, &refs)
+	}
+
+	newRef := AuctionRef{id, endTime}
+	refs.Refs = append(refs.Refs, newRef)
+	fmt.Printf("REFS: %v", refs)
+	bz = k.cdc.MustMarshalBinaryLengthPrefixed(refs)
+	store.Set(k.getLiveAuctionListKey(), bz)
+	return
+}
+
+func (k Keeper) RemoveFromList(ctx sdk.Context, endTime int64, id ID) {
+	var refs AuctionRefs
+	var newRefs []AuctionRef
+
+	store := ctx.KVStore(k.storeKey)
+
+	bz := store.Get(k.getLiveAuctionListKey())
+	if len(bz) > 0 {
+		k.cdc.MustUnmarshalBinaryLengthPrefixed(bz, &refs)
+	}
+
+	for _, ref := range refs.Refs {
+		if ref.Id != id {
+			newRefs = append(newRefs, ref)
+		}
+		refs.Refs = newRefs
+		bz = k.cdc.MustMarshalBinaryLengthPrefixed(newRefs)
+		store.Set(k.getLiveAuctionListKey(), bz)
+	}
+	return
+}
+
+func (k Keeper) ExpireAuctions(ctx sdk.Context, endTime int64) (result []AuctionRef) {
+	var refs AuctionRefs
+	var newRefs []AuctionRef
+
+	store := ctx.KVStore(k.storeKey)
+
+	bz := store.Get(k.getLiveAuctionListKey())
+	if len(bz) > 0 {
+		k.cdc.MustUnmarshalBinaryLengthPrefixed(bz, &refs)
+	}
+
+	for _, ref := range refs.Refs {
+		if ref.EndTime > endTime {
+			newRefs = append(newRefs, ref)
+		} else {
+			result = append(result, ref)
+		}
+	}
+	refs.Refs = newRefs
+	bz = k.cdc.MustMarshalBinaryLengthPrefixed(refs)
+	store.Set(k.getLiveAuctionListKey(), bz)
+
+	bz = store.Get(k.getPastAuctionListKey())
+	if len(bz) > 0 {
+		k.cdc.MustUnmarshalBinaryLengthPrefixed(bz, &refs)
+	} else {
+		refs = AuctionRefs{}
+	}
+	refs.Refs = append(refs.Refs, result...)
+	bz = k.cdc.MustMarshalBinaryLengthPrefixed(refs)
+	store.Set(k.getPastAuctionListKey(), bz)
+
+	return
+}
+
+func (k Keeper) GetAuctions(ctx sdk.Context, key []byte) (result []Auction) {
+	var refs AuctionRefs
+
+	store := ctx.KVStore(k.storeKey)
+
+	bz := store.Get(key)
+	if len(bz) > 0 {
+		k.cdc.MustUnmarshalBinaryLengthPrefixed(bz, &refs)
+	}
+
+	for _, ref := range refs.Refs {
+		a, found := k.GetAuction(ctx, ref.Id)
+		if !found {
+			panic("Auction doesn't exist!")
+		}
+		result = append(result, a)
+	}
+	return
+}
+
+func (k Keeper) GetPastAuctions(ctx sdk.Context) (result []Auction) {
+	return k.GetAuctions(ctx, k.getPastAuctionListKey())
+}
+
+func (k Keeper) GetLiveAuctions(ctx sdk.Context) (result []Auction) {
+	return k.GetAuctions(ctx, k.getLiveAuctionListKey())
+}
+
+// GetAuction gets an auction from the store by auctionID
 func (k Keeper) GetAuction(ctx sdk.Context, auctionID ID) (Auction, bool) {
 	var auction Auction
 
 	store := ctx.KVStore(k.storeKey)
+
 	bz := store.Get(k.getAuctionKey(auctionID))
 	if bz == nil {
 		return auction, false // TODO what is the correct behavior when an auction is not found? gov module follows this pattern of returning a bool
 	}
 
 	k.cdc.MustUnmarshalBinaryLengthPrefixed(bz, &auction)
+
 	return auction, true
 }
 
 // deleteAuction removes an auction from the store without any validation
 func (k Keeper) deleteAuction(ctx sdk.Context, auctionID ID) {
 	// remove from queue
-	auction, found := k.GetAuction(ctx, auctionID)
-	if found {
-		k.removeFromQueue(ctx, auction.GetEndTime(), auctionID)
-	}
-
-	// delete auction
-	store := ctx.KVStore(k.storeKey)
-	store.Delete(k.getAuctionKey(auctionID))
+	// auction, found := k.GetAuction(ctx, auctionID)
+	// if found {
+	// 	k.RemoveFromList(ctx, auction.GetEndTime(), auctionID)
+	// }
+	//
+	// // delete auction
+	// store := ctx.KVStore(k.storeKey)
+	// store.Delete(k.getAuctionKey(auctionID))
 }
 
 // ---------- Queue and key methods ----------
@@ -240,58 +342,20 @@ func (k Keeper) getAuctionKey(auctionID ID) []byte {
 	return []byte(fmt.Sprintf("auctions:%d", auctionID))
 }
 
-// Inserts a AuctionID into the queue at endTime
-func (k Keeper) insertIntoQueue(ctx sdk.Context, endTime int64, auctionID ID) {
-	// get the store
-	store := ctx.KVStore(k.storeKey)
-	// marshal thing to be inserted
-	bz := k.cdc.MustMarshalBinaryLengthPrefixed(auctionID)
-	// store it
-	store.Set(
-		getQueueElementKey(endTime, auctionID),
-		bz,
-	)
+func (k Keeper) getLiveAuctionListKey() []byte {
+	return []byte("auctionLiveList")
 }
 
-// removes an auctionID from the queue
-func (k Keeper) removeFromQueue(ctx sdk.Context, endTime int64, auctionID ID) {
-	store := ctx.KVStore(k.storeKey)
-	store.Delete(getQueueElementKey(endTime, auctionID))
-}
-
-// Returns an iterator for all the auctions in the queue that expire by endTime
-func (k Keeper) getQueueIterator(ctx sdk.Context, endTime int64) sdk.Iterator { // TODO rename to "getAuctionsByExpiry" ?
-	// get store
-	store := ctx.KVStore(k.storeKey)
-	// get an interator
-	return store.Iterator(
-		queueKeyPrefix, // start key
-		sdk.PrefixEndBytes(getQueueElementKeyPrefix(endTime)), // end key (apparently exclusive but tests suggested otherwise)
-	)
+func (k Keeper) getPastAuctionListKey() []byte {
+	return []byte("auctionPastList")
 }
 
 // GetAuctionIterator returns an iterator over all auctions in the store
+// implement iterator over live auctions?
 func (k Keeper) GetAuctionIterator(ctx sdk.Context) sdk.Iterator {
 	store := ctx.KVStore(k.storeKey)
-	return sdk.KVStorePrefixIterator(store, nil)
+	return sdk.KVStorePrefixIterator(store, []byte("auction"))
 }
 
 var queueKeyPrefix = []byte("queue")
 var keyDelimiter = []byte(":")
-
-// Returns half a key for an auctionID in the queue, it missed the id off the end
-func getQueueElementKeyPrefix(endTime int64) []byte {
-	return bytes.Join([][]byte{
-		queueKeyPrefix,
-		sdk.Uint64ToBigEndian(uint64(endTime)), // TODO check this gives correct ordering
-	}, keyDelimiter)
-}
-
-// Returns the key for an auctionID in the queue
-func getQueueElementKey(endTime int64, auctionID ID) []byte {
-	return bytes.Join([][]byte{
-		queueKeyPrefix,
-		sdk.Uint64ToBigEndian(uint64(endTime)), // TODO check this gives correct ordering
-		sdk.Uint64ToBigEndian(uint64(auctionID)),
-	}, keyDelimiter)
-}

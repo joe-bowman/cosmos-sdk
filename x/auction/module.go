@@ -15,8 +15,9 @@ var (
 
 //  ModuleName name of module
 const (
-	ModuleName = "auction"
-	RouterKey  = ModuleName
+	ModuleName        = "auction"
+	RouterKey         = ModuleName
+	DefaultParamSpace = ModuleName
 )
 
 // AppModuleBasic app module basics object

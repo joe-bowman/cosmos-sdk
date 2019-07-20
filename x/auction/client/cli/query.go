@@ -5,9 +5,12 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/x/auction"
 	"github.com/spf13/cobra"
 )
+
+type StringyBytes []byte
+
+func (s StringyBytes) String() string { return string(s) }
 
 // GetCmdGetAuctions queries the auctions in the store
 func GetCmdGetAuctions(queryRoute string, cdc *codec.Codec) *cobra.Command {
@@ -21,12 +24,8 @@ func GetCmdGetAuctions(queryRoute string, cdc *codec.Codec) *cobra.Command {
 				fmt.Printf("error when getting auctions - %s", err)
 				return nil
 			}
-			var out auction.QueryResAuctions
-			cdc.MustUnmarshalJSON(res, &out)
-			if len(out) == 0 {
-				out = append(out, "There are currently no auctions")
-			}
-			return cliCtx.PrintOutput(out)
+
+			return cliCtx.PrintOutput(StringyBytes(res))
 		},
 	}
 }

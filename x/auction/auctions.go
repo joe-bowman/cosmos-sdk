@@ -2,26 +2,29 @@ package auction
 
 import (
 	"fmt"
-	"sort"
 	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 const (
-	// MaxAuctionDuration max length of auction, in blocks\
-	DefaultAuctionDuration int64 = 5  // 60s
-	MaxAuctionDuration     int64 = 10 // 120s /*1 * 24 * 3600 / 5*/ // roughly 1 days, at 5s block time // 17280
+	// MaxAuctionDuration max length of auction, _in blocks_
+	DefaultAuctionDuration int64 = 80  // 60s
+	MaxAuctionDuration     int64 = 100 // 120s /*1 * 24 * 3600 / 5*/ // roughly 1 days, at 5s block time // 17280
 	// BidExtensionDuration how long an auction gets extended when someone bids, in blocks
-	BidExtensionDuration int64 = 3 // 30s /*1800 / 5*/ // roughly 30 mins, at 5s block time // 360
-	FeeAuctionFrequency  int64 = 25
+	BidExtensionDuration int64 = 10 // 30s /*1800 / 5*/ // roughly 30 mins, at 5s block time // 360
+	FeeAuctionFrequency  int64 = 120
 )
 
 // Auction is an interface to several types of auction.
 type Auction interface {
 	GetID() ID
 	SetID(ID)
-	GetBids() []Bid
+	GetBid() sdk.Coin
+	GetBidder() sdk.AccAddress
+	GetLot() sdk.Coin
+	SetBid(sdk.Coin)
+	SetBidder(sdk.AccAddress)
 	PlaceBid(currentBlockHeight int64, bidder sdk.AccAddress, bid sdk.Coin) sdk.Error
 	GetEndTime() int64 // auctions close at the end of the block with blockheight EndTime (ie bids placed in that block are valid)
 	String() string
@@ -29,18 +32,12 @@ type Auction interface {
 
 // BaseAuction type shared by all Auctions
 type BaseAuction struct {
-	ID         ID
-	Initiator  sdk.ValAddress // Person who starts the auction. Giving away Lot (aka seller in a forward auction)
-	Lot        sdk.Coin       // Amount of coins up being given by initiator (FA - amount for sale by seller, RA - cost of good by buyer (bid))
-	Bids       []Bid          // Placed bids
-	EndTime    int64          // Block height at which the auction closes. It closes at the end of this block
-	MaxEndTime int64          // Maximum closing time. Auctions can close before this but never after.
-}
-
-type Bid struct {
-	Bidder sdk.AccAddress // AccAddress of Bidder
-	Bid    sdk.Coin       // Value of bid.
-	Height int64          // Height that bid was placed, for ordering of same value bids.
+	ID         ID             `json:"auction_id"`
+	Lot        sdk.Coin       `json:"lot"`          // Amount of coins up being given by initiator (FA - amount for sale by seller, RA - cost of good by buyer (bid))
+	Bid        sdk.Coin       `json:"bid"`          // Current bid
+	Bidder     sdk.AccAddress `json:"bidder"`       // Current bidder
+	EndTime    int64          `json:"end_time"`     // Block height at which the auction closes. It closes at the end of this block
+	MaxEndTime int64          `json:"max_end_time"` // Maximum closing time. Auctions can close before this but never after.
 }
 
 // ID type for auction IDs
@@ -61,26 +58,33 @@ func (a BaseAuction) GetID() ID { return a.ID }
 // SetID setter for auction ID
 func (a *BaseAuction) SetID(id ID) { a.ID = id }
 
+// GetBid
+func (a BaseAuction) GetBid() sdk.Coin { return a.Bid }
+
+// SetBid
+func (a *BaseAuction) SetBid(bid sdk.Coin) { a.Bid = bid }
+
+// GetBidder
+func (a BaseAuction) GetBidder() sdk.AccAddress { return a.Bidder }
+
+// SetBidder
+func (a *BaseAuction) SetBidder(bid sdk.AccAddress) { a.Bidder = bid }
+
+// GetLot
+func (a BaseAuction) GetLot() sdk.Coin { return a.Lot }
+
 // GetEndTime getter for auction end time
 func (a BaseAuction) GetEndTime() int64 { return a.EndTime }
 
-func (a BaseAuction) GetBids() []Bid {
-	// sort bid list
-	sort.Slice(a.Bids[:], func(i, j int) bool {
-		return a.Bids[i].Bid.Amount.GTE(a.Bids[j].Bid.Amount) && a.Bids[i].Height < a.Bids[j].Height
-	})
-	return a.Bids
-}
-
 func (a BaseAuction) String() string {
 	return fmt.Sprintf(`Auction %d:
-  Initiator:              %s
   Lot:               			%s
-  Bids:            		    %v
+  Current Bid:         		%v
+	Current Bidder:         %v
   End Time:   						%d
   Max End Time:      			%d`,
-		a.GetID(), a.Initiator, a.Lot,
-		a.GetBids(), a.GetEndTime(),
+		a.GetID(), a.Lot,
+		a.Bid, a.Bidder, a.GetEndTime(),
 		a.MaxEndTime,
 	)
 }
@@ -91,12 +95,12 @@ type ForwardAuction struct {
 }
 
 // NewForwardAuction creates a new forward auction
-func NewForwardAuction(seller sdk.ValAddress, lot sdk.Coin, initialBid sdk.Coin, endTime int64) ForwardAuction {
+func NewForwardAuction(lot sdk.Coin, initialBid sdk.Coin, endTime int64) ForwardAuction {
 	auction := ForwardAuction{BaseAuction{
 		// no ID
-		Initiator:  seller,
 		Lot:        lot,
-		Bids:       []Bid{}, // send the proceeds from the first bid back to the seller
+		Bid:        sdk.Coin{"uatom", sdk.ZeroInt()},
+		Bidder:     nil,
 		EndTime:    endTime,
 		MaxEndTime: endTime,
 	}}
@@ -108,10 +112,12 @@ func (a *ForwardAuction) PlaceBid(currentBlockHeight int64, bidder sdk.AccAddres
 	// TODO check lot size matches lot?
 	// check auction has not closed
 	if currentBlockHeight > a.EndTime {
-		return sdk.ErrInternal("auction has closed")
+		return sdk.ErrInternal("Auction has closed")
 	}
 
-	a.Bids = append(a.Bids, Bid{bidder, bid, currentBlockHeight})
+	if bid.Amount.LTE(a.Bid.Amount) {
+		return sdk.ErrInternal("Bid amount is less than or equal to current best bid")
+	}
 
 	// increment timeout // TODO into keeper?
 	a.EndTime = min(int64(currentBlockHeight+BidExtensionDuration), int64(a.MaxEndTime)) // TODO is there a better way to structure these types?

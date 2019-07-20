@@ -46,7 +46,7 @@ type Validator struct {
 	MinSelfDelegation       sdk.Int        `json:"min_self_delegation"` // validator's self declared minimum self delegation
 	SharesDenomPrefix       string         `json:"shares_denom_prefix"` // chain unique prefix for a validator's shares token
 	FeePool                 sdk.DecCoins   `json:"fee_pool"`            // current nonBondDenom fee Pool
-	LastFeePool             sdk.DecCoins   `json:"last_fee_pool"`       // last nonBondDenom fee Pool, used as a temporary holding during auction
+	LastFeePool             sdk.Coins      `json:"last_fee_pool"`       // last nonBondDenom fee Pool, used as a temporary holding during auction
 }
 
 // Validators is a collection of Validator
@@ -84,7 +84,7 @@ func NewValidator(operator sdk.ValAddress, pubKey crypto.PubKey, description Des
 		MinSelfDelegation:       sdk.OneInt(),
 		SharesDenomPrefix:       denomPrefix,
 		FeePool:                 sdk.DecCoins(nil),
-		LastFeePool:             sdk.DecCoins(nil),
+		LastFeePool:             sdk.Coins(nil),
 	}
 }
 
@@ -154,7 +154,7 @@ type bechValidator struct {
 	MinSelfDelegation       sdk.Int        `json:"min_self_delegation"` // minimum self delegation
 	SharesDenomPrefix       string         `json:"shares_denom_prefix"` // chain unique prefix for a validator's shares token
 	FeePool                 sdk.DecCoins   `json:"fee_pool"`            // current nonBondDenom fee Pool
-	LastFeePool             sdk.DecCoins   `json:"last_fee_pool"`       // last nonBondDenom fee Pool, used as a temporary holding during auction
+	LastFeePool             sdk.Coins      `json:"last_fee_pool"`       // last nonBondDenom fee Pool, used as a temporary holding during auction
 }
 
 // MarshalJSON marshals the validator to JSON using Bech32
@@ -381,29 +381,19 @@ func (v Validator) AddCoinsToFeePool(coins sdk.DecCoins) Validator {
 // on unsettled auction for denom, return balance of denom to fee_pool
 func (v Validator) ReturnCoinsToFeePool(denom string) Validator {
 	amount := v.LastFeePool.AmountOf(denom)
-	coin := sdk.DecCoins{{denom, amount}}
+	coin := sdk.Coins{{denom, amount}}
 	v.LastFeePool = v.LastFeePool.Sub(coin)
-	v.FeePool = v.FeePool.Add(coin)
+	v.FeePool = v.FeePool.Add(sdk.NewDecCoins(coin))
 	return v
 }
 
 func (v Validator) SettleFeePool(pool Pool, denom string, coin sdk.DecCoin) Validator {
 	amount := v.LastFeePool.AmountOf(denom)
-	subCoin := sdk.DecCoins{{denom, amount}}
+	subCoin := sdk.Coins{{denom, amount}}
 	v.LastFeePool = v.LastFeePool.Sub(subCoin)
 	intcoin, change := coin.TruncateDecimal()
 	v.FeePool = v.FeePool.Add(sdk.DecCoins{change})
 	v.AddTokensFromDel(pool, intcoin.Amount)
-	return v
-}
-
-func (v Validator) EmptyCurrentFeePool() Validator {
-	// assert last_fee_pool is empty
-	if !v.LastFeePool.IsZero() {
-		panic(fmt.Sprint("should not happen: last_fee_pool is not zero"))
-	}
-	v.LastFeePool = v.FeePool
-	v.FeePool = sdk.DecCoins(nil)
 	return v
 }
 
@@ -566,4 +556,4 @@ func (v Validator) GetSharesConversionRate() sdk.Dec {
 		return v.Tokens.ToDec().Quo(v.DelegatorShares)
 	}
 }
-func (v Validator) GetFeePool() sdk.DecCoins { return v.FeePool.Add(v.LastFeePool) }
+func (v Validator) GetFeePool() sdk.DecCoins { return v.FeePool.Add(sdk.NewDecCoins(v.LastFeePool)) }
