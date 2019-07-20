@@ -307,6 +307,10 @@ func (keeper Keeper) AddVote(ctx sdk.Context, proposalID uint64, voterAddr sdk.A
 		return ErrInvalidVote(keeper.codespace, option)
 	}
 
+	if proposal.ProposalType() == ProposalTypeRebalancing {
+		// TODO:
+	}
+
 	vote := Vote{
 		ProposalID: proposalID,
 		Voter:      voterAddr,

@@ -31,6 +31,13 @@ type TallyParams struct {
 	Veto      sdk.Dec `json:"veto"`      //  Minimum value of Veto votes to Total votes ratio for proposal to be vetoed. Initial value: 1/3
 }
 
+// Param around Tallying votes in governance
+type RebalancingTallyParams struct {
+	Quorum    sdk.Dec `json:"quorum"`    //  Minimum percentage of total stake needed to vote for a result to be considered valid
+	Threshold sdk.Dec `json:"threshold"` //  Minimum propotion of Yes votes for proposal to pass. Initial value: 0.5
+	Veto      sdk.Dec `json:"veto"`      //  Minimum value of Veto votes to Total votes ratio for proposal to be vetoed. Initial value: 1/3
+}
+
 func (tp TallyParams) String() string {
 	return fmt.Sprintf(`Tally Params:
   Quorum:             %s
@@ -42,6 +49,8 @@ func (tp TallyParams) String() string {
 // Param around Voting in governance
 type VotingParams struct {
 	VotingPeriod time.Duration `json:"voting_period"` //  Length of the voting period.
+	RebalancingVotingPeriod time.Duration `json:"voting_period"` //  Length of the voting period.
+	//TODO: use RebalancingVotingPeriod
 }
 
 func (vp VotingParams) String() string {
