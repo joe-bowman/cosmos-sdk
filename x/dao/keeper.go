@@ -36,8 +36,8 @@ var (
 	// TODO: Find another way to implement this without using accounts, or find a cleaner way to implement it using accounts.
 	DepositedCoinsAccAddr     = sdk.AccAddress(crypto.AddressHash([]byte("daoDepositedCoins")))
 	BurnedDepositCoinsAccAddr = sdk.AccAddress(crypto.AddressHash([]byte("daoBurnedDepositCoins")))
-	StakedCoinsAccAddr        = sdk.AccAddress(crypto.AddressHash([]byte("daoStakedCoins")))
-	// TODO: using StakedCoinsAccAddr for keep stake
+	DaoStakedCoinsAccAddr     = sdk.AccAddress(crypto.AddressHash([]byte("daoStakedCoins")))
+	// TODO: using DaoStakedCoinsAccAddr for keep stake
 )
 
 // Key declaration for parameters
@@ -292,7 +292,7 @@ func (keeper Keeper) setTallyParams(ctx sdk.Context, tallyParams TallyParams) {
 // Votes
 
 // Adds a vote on a specific proposal
-func (keeper Keeper) AddVote(ctx sdk.Context, proposalID uint64, voterAddr sdk.AccAddress, option VoteOption) sdk.Error {
+func (keeper Keeper) AddVote(ctx sdk.Context, proposalID uint64, voterAddr sdk.AccAddress, option VoteOption, voteAmount sdk.Coin) sdk.Error {
 	proposal, ok := keeper.GetProposal(ctx, proposalID)
 	if !ok {
 		return ErrUnknownProposal(keeper.codespace, proposalID)
@@ -309,10 +309,26 @@ func (keeper Keeper) AddVote(ctx sdk.Context, proposalID uint64, voterAddr sdk.A
 		// TODO:
 	}
 
+	// TODO: need to check voteAmount > balance
+	voterBalance := keeper.ck.GetCoins(ctx, voterAddr).AmountOf(proposal.Denom)
+	voterChange := voterBalance.Sub(voteAmount.Amount)
+	if voterChange.IsNegative() {
+		return sdk.ErrInvalidCoins("voteAmount should bigger than balance")
+		//panic("voteAmount should bigger than balance")
+	}
+
+	_, err := keeper.ck.SendCoins(ctx, voterAddr, DaoStakedCoinsAccAddr, sdk.Coins{voteAmount})
+	if err != nil {
+		return err
+	}
+	proposal.TotalDaoStake = proposal.TotalDaoStake.Add(voteAmount)
+	keeper.SetProposal(ctx, proposal)
+
 	vote := Vote{
 		ProposalID: proposalID,
 		Voter:      voterAddr,
 		Option:     option,
+		VoteAmount: voteAmount,
 	}
 	keeper.setVote(ctx, proposalID, voterAddr, vote)
 
@@ -456,7 +472,26 @@ func (keeper Keeper) DeleteDeposits(ctx sdk.Context, proposalID uint64) {
 	}
 }
 
-// TODO: add Lock as Vote like Deposit
+// Gets all the votes on a specific proposal
+//func (keeper Keeper) GetVotes(ctx sdk.Context, proposalID uint64) sdk.Iterator {
+//	store := ctx.KVStore(keeper.storeKey)
+//	return sdk.KVStorePrefixIterator(store, KeyVotesSubspace(proposalID))
+//}
+
+// Refunds all the daoStaked on a specific proposal
+func (keeper Keeper) RefundDaoStakes(ctx sdk.Context, proposalID uint64) {
+
+	votesIterator := keeper.GetVotes(ctx, proposalID)
+	for ; votesIterator.Valid(); votesIterator.Next() {
+		vote := &Vote{}
+		keeper.cdc.MustUnmarshalBinaryLengthPrefixed(votesIterator.Value(), vote)
+
+		_, err := keeper.ck.SendCoins(ctx, DaoStakedCoinsAccAddr, vote.Voter, sdk.Coins{vote.VoteAmount})
+		if err != nil {
+			panic("should not happen")
+		}
+	}
+}
 
 // ProposalQueues
 

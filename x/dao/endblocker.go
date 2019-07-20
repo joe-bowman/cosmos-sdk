@@ -55,10 +55,12 @@ func EndBlocker(ctx sdk.Context, keeper Keeper) sdk.Tags {
 		var tagValue string
 		if passes {
 			keeper.RefundDeposits(ctx, activeProposal.ProposalID)
+			keeper.RefundDaoStakes(ctx, activeProposal.ProposalID)
 			activeProposal.Status = StatusPassed
 			tagValue = tags.ActionProposalPassed
 		} else {
 			keeper.DeleteDeposits(ctx, activeProposal.ProposalID)
+			keeper.RefundDaoStakes(ctx, activeProposal.ProposalID)
 			activeProposal.Status = StatusRejected
 			tagValue = tags.ActionProposalRejected
 		}

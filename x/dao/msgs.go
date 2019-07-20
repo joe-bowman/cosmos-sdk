@@ -147,13 +147,16 @@ type MsgVoteDao struct {
 	ProposalID uint64         `json:"proposal_id"` // ID of the proposal
 	Voter      sdk.AccAddress `json:"voter"`       //  address of the voter
 	Option     VoteOption     `json:"option"`      //  option from OptionSet chosen by the voter
+	VoteAmount sdk.Coin       `json:"vote_amount"` // it will be staked(deposit)  need to bigger than balance,
+													// need to same denom with proposal.denom
 }
 
-func NewMsgVoteDao(voter sdk.AccAddress, proposalID uint64, option VoteOption) MsgVoteDao {
+func NewMsgVoteDao(voter sdk.AccAddress, proposalID uint64, option VoteOption, voteAmount sdk.Coin) MsgVoteDao {
 	return MsgVoteDao{
 		ProposalID: proposalID,
 		Voter:      voter,
 		Option:     option,
+		VoteAmount: voteAmount,
 	}
 }
 

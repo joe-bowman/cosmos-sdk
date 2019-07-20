@@ -12,10 +12,11 @@ type Vote struct {
 	Voter      sdk.AccAddress `json:"voter"`       //  address of the voter
 	ProposalID uint64         `json:"proposal_id"` //  proposalID of the proposal
 	Option     VoteOption     `json:"option"`      //  option from OptionSet chosen by the voter
+	VoteAmount sdk.Coin       `json:"vote_amount"`
 }
 
 func (v Vote) String() string {
-	return fmt.Sprintf("Voter %s voted with option %s on proposal %d", v.Voter, v.Option, v.ProposalID)
+	return fmt.Sprintf("Voter %s voted with option %s on proposal %d, %s", v.Voter, v.Option, v.ProposalID, v.VoteAmount.String())
 }
 
 // Votes is a collection of Vote
@@ -24,7 +25,7 @@ type Votes []Vote
 func (v Votes) String() string {
 	out := fmt.Sprintf("Votes for Proposal %d:", v[0].ProposalID)
 	for _, vot := range v {
-		out += fmt.Sprintf("\n  %s: %s", vot.Voter, vot.Option)
+		out += fmt.Sprintf("\n  %s: %s, %s", vot.Voter, vot.Option, vot.VoteAmount.String())
 	}
 	return out
 }
