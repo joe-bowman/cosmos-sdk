@@ -274,6 +274,43 @@ func (msg MsgIndexDelegate) ValidateBasic() sdk.Error {
 	return nil
 }
 
+// -----------------------------------------------------------------------------
+
+type MsgIndexRebalance struct {
+	DelegatorAddress sdk.AccAddress     `json:"delegator_address"`
+	Portions         []ValidatorPortion `json:"validator_portion"`
+	Denomination     string             `json:"denomination"`
+}
+
+func (msg MsgIndexRebalance) Route() string { return RouterKey }
+func (msg MsgIndexRebalance) Type() string  { return "index_delegate" }
+func (msg MsgIndexRebalance) GetSigners() []sdk.AccAddress {
+	return []sdk.AccAddress{msg.DelegatorAddress}
+}
+
+// get the bytes for the message signer to sign on
+func (msg MsgIndexRebalance) GetSignBytes() []byte {
+	bz := MsgCdc.MustMarshalJSON(msg)
+	return sdk.MustSortJSON(bz)
+}
+
+// quick validity check
+func (msg MsgIndexRebalance) ValidateBasic() sdk.Error {
+	if msg.DelegatorAddress.Empty() {
+		return ErrNilDelegatorAddr(DefaultCodespace)
+	}
+
+	for _, portion := range msg.Portions {
+		if portion.ValidatorAddress.Empty() {
+			return ErrNilValidatorAddr(DefaultCodespace)
+		}
+		if portion.Amount.Amount.LTE(sdk.ZeroInt()) {
+			return ErrBadDelegationAmount(DefaultCodespace)
+		}
+	}
+	return nil
+}
+
 // HACKATOM END
 // -----------------------------------------------------------------------------
 

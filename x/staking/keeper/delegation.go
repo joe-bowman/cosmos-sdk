@@ -521,6 +521,8 @@ func (k Keeper) NewIndex(
 	// Mint Our Shares Coin (Index), and Add to the delegators wallet.
 	indexCoin := sdk.NewCoin(denomination, totalSubtracted.Amount)
 	_, _, err = k.bankKeeper.AddCoins(ctx, delAddr, sdk.Coins{indexCoin})
+	k.denominationBaskets[denomination] = sharesList
+
 	if err != nil {
 		return sdk.Dec{}, err
 	}
@@ -537,7 +539,72 @@ func (k Keeper) ExistingIndex(
 	denomination string,
 	subtractAccount bool,
 ) (newShares sdk.Dec, err sdk.Error) {
-	return sdk.Dec{}, nil
+	// Get Validator Shares
+	basket, ok := k.denominationBaskets[denomination]
+	if !ok {
+		return sdk.Dec{}, nil
+	}
+
+	// Calculate Total Share Count
+	totalCount := sdk.ZeroInt()
+	for _, portion := range basket {
+		totalCount = totalCount.Add(portion.Amount.Amount)
+	}
+
+	type CoinData struct {
+		percentage       sdk.Dec
+		validatorAddress sdk.ValAddress
+	}
+
+	// Calculate Percentages
+	coinData := make([]CoinData, 0)
+	for _, portion := range basket {
+		coinData = append(coinData, CoinData{
+			percentage:       portion.Amount.Amount.ToDec().Quo(totalCount.ToDec()),
+			validatorAddress: portion.ValidatorAddress,
+		})
+	}
+
+	// Using Proportions, Delegate Atoms to Validators
+	// TODO: Revisit this with joe's advice.
+	// amounts := make([]sdk.Coin, 0)
+	// for _, percentage := range percentages {
+	// }
+	for _, share := range coinData {
+		validator, _ := k.GetValidator(ctx, share.validatorAddress)
+		if validator.InvalidExRate() {
+			return sdk.ZeroDec(), types.ErrDelegatorShareExRateInvalid(k.Codespace())
+		}
+
+		// Add Shares/Tokens to the Validator we're delegating too.
+		validator, _ = k.AddValidatorTokensAndShares(
+			ctx,
+			validator,
+			totalCount.ToDec().Mul(share.percentage).TruncateInt(),
+		)
+
+		// Finalize
+		k.AfterDelegationModified(ctx, delAddr, validator.OperatorAddress)
+	}
+
+	// Consume Total Delegated Coins from Account
+	_, err = k.bankKeeper.DelegateCoins(
+		ctx,
+		delAddr,
+		sdk.Coins{sdk.NewCoin(
+			k.GetParams(ctx).BondDenom,
+			totalCount,
+		)},
+	)
+
+	if err != nil {
+		return sdk.Dec{}, err
+	}
+
+	// Mint New Coins
+	indexCoin := sdk.NewCoin(denomination, totalCount)
+	_, _, err = k.bankKeeper.AddCoins(ctx, delAddr, sdk.Coins{indexCoin})
+	return newShares, nil
 }
 
 func (k Keeper) DelegateIndex(
@@ -560,6 +627,33 @@ func (k Keeper) DelegateIndex(
 		k.ExistingIndex(ctx, delAddr, amount, denomination, subtractAccount)
 	} else {
 		k.NewIndex(ctx, delAddr, portions, denomination, subtractAccount)
+	}
+
+	return sdk.Dec{}, nil
+}
+
+func (k Keeper) RebalanceIndex(
+	ctx sdk.Context,
+	delAddr sdk.AccAddress,
+	portions []types.ValidatorPortion,
+	denomination string,
+	subtractAccount bool,
+) (newShares sdk.Dec, err sdk.Error) {
+	basket, ok := k.denominationBaskets[denomination]
+	if !ok {
+		return sdk.Dec{}, nil
+	}
+
+	// For Each Portion, Find Old Portion and Calculate Difference
+	// to either delegate or unbond.
+	for _, portion := range portions {
+		// Find Existing Delegation if Exists
+		difference := sdk.ZeroInt()
+		for _, existing := range basket {
+			if existing.ValidatorAddress.Equals(portion.ValidatorAddress) {
+				difference = existing.Amount.Amount
+			}
+		}
 	}
 
 	return sdk.Dec{}, nil
