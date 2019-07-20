@@ -141,6 +141,39 @@ $ gaiacli tx staking delegate cosmosvaloper1l2rsakp388kuv9k8qzq6lrm9taddae7fpx59
 				return err
 			}
 
+			msg := staking.NewMsgDelegate(delAddr, valAddr, amount)
+			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg}, false)
+		},
+	}
+}
+
+// GetCmdDelegate implements the delegate command.
+func GetCmdIndexDelegate(cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "delegate [validator-addr] [amount]",
+		Args:  cobra.ExactArgs(2),
+		Short: "delegate liquid tokens to a validator",
+		Long: strings.TrimSpace(`Delegate an amount of liquid coins to a validator from your wallet:
+
+$ gaiacli tx staking delegate cosmosvaloper1l2rsakp388kuv9k8qzq6lrm9taddae7fpx59wm 1000stake --from mykey
+`),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			txBldr := authtxb.NewTxBuilderFromCLI().WithTxEncoder(auth.DefaultTxEncoder(cdc))
+			cliCtx := context.NewCLIContext().
+				WithCodec(cdc).
+				WithAccountDecoder(cdc)
+
+			amount, err := sdk.ParseCoin(args[1])
+			if err != nil {
+				return err
+			}
+
+			delAddr := cliCtx.GetFromAddress()
+			valAddr, err := sdk.ValAddressFromBech32(args[0])
+			if err != nil {
+				return err
+			}
+
 			msg := staking.MsgIndexDelegate{
 				Denomination:     "",
 				DelegatorAddress: delAddr,

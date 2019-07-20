@@ -24,7 +24,7 @@ type Keeper struct {
 	paramstore          params.Subspace
 	validatorCache      map[string]cachedValidator
 	validatorCacheList  *list.List
-	denominationBaskets map[string][]Basket
+	denominationBaskets map[string]Basket
 
 	// codespace
 	codespace sdk.CodespaceType
@@ -43,12 +43,12 @@ func NewKeeper(cdc *codec.Codec, key, tkey sdk.StoreKey, bk types.BankKeeper,
 		validatorCache:      make(map[string]cachedValidator, aminoCacheSize),
 		validatorCacheList:  list.New(),
 		codespace:           codespace,
-		denominationBaskets: make(map[string][]Basket),
+		denominationBaskets: make(map[string]Basket),
 	}
 	return keeper
 }
 
-func (k *Keeper) GetDenomPercentages(denom string) []Basket {
+func (k *Keeper) GetDenomPercentages(denom string) Basket {
 	return k.denominationBaskets[denom]
 }
 

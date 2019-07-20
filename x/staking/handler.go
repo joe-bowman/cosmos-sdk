@@ -25,6 +25,8 @@ func NewHandler(k keeper.Keeper) sdk.Handler {
 			return handleMsgDelegate(ctx, msg, k)
 		case types.MsgIndexDelegate:
 			return handleMsgIndexDelegate(ctx, msg, k)
+		case types.MsgIndexRebalance:
+			return handleMsgIndexRebalance(ctx, msg, k)
 		case types.MsgBeginRedelegate:
 			return handleMsgBeginRedelegate(ctx, msg, k)
 		case types.MsgUndelegate:
@@ -230,6 +232,8 @@ func handleMsgDelegate(ctx sdk.Context, msg types.MsgDelegate, k keeper.Keeper) 
 	}
 }
 
+// HACKATOM: Hackatom Messages
+// -----------------------------------------------------------------------------
 func handleMsgIndexDelegate(
 	ctx sdk.Context,
 	msg types.MsgIndexDelegate,
@@ -271,6 +275,38 @@ func handleMsgIndexDelegate(
 		Tags: tags,
 	}
 }
+
+func handleMsgIndexRebalance(
+	ctx sdk.Context,
+	msg types.MsgIndexRebalance,
+	k keeper.Keeper,
+) sdk.Result {
+	// Attempt to get Basket, It must already exist in order to
+	// rebalance the tokens within it.
+	basket, ok := k.denominationBaskets[denomination]
+	if !ok {
+		return sdk.Dec{}, nil
+	}
+
+	// For Each Portion, Rebalance Position
+	k.RebalanceIndex(
+		ctx,
+		msg.DelegatorAddress,
+		msg.Portions,
+		msg.Denomination,
+		true,
+	)
+
+	tags := sdk.NewTags(
+		tags.Delegator, msg.DelegatorAddress.String(),
+	)
+
+	return sdk.Result{
+		Tags: tags,
+	}
+}
+
+// HACKATOM END
 
 func handleMsgUndelegate(ctx sdk.Context, msg types.MsgUndelegate, k keeper.Keeper) sdk.Result {
 
