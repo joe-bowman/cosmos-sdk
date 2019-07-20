@@ -432,14 +432,12 @@ func (k Keeper) Delegate(ctx sdk.Context, delAddr sdk.AccAddress, bondAmt sdk.In
 	sharesDenomName := strings.ToLower(fmt.Sprintf("%s%s", validator.GetSharesDenomPrefix(), k.GetParams(ctx).BondDenom))
 
 	if subtractAccount {
-		// DelegateCoins is a lie, actually subtracts + reserves currency for delegation.
 		_, err := k.bankKeeper.DelegateCoins(ctx, delAddr, sdk.Coins{sdk.NewCoin(k.GetParams(ctx).BondDenom, bondAmt)})
 		if err != nil {
 			return sdk.Dec{}, err
 		}
 	}
 
-	// DO bonding here.
 	validator, newShares = k.AddValidatorTokensAndShares(ctx, validator, bondAmt)
 	sharesCoin := sdk.NewCoin(sharesDenomName, newShares.TruncateInt())
 
@@ -450,68 +448,6 @@ func (k Keeper) Delegate(ctx sdk.Context, delAddr sdk.AccAddress, bondAmt sdk.In
 
 	// Call the after-modification hook
 	k.AfterDelegationModified(ctx, delAddr, validator.OperatorAddress)
-
-	return newShares, nil
-}
-
-func (k Keeper) DelegateIndex(
-	ctx sdk.Context,
-	delAddr sdk.AccAddress,
-	portions []types.ValidatorPortion,
-	denomination string,
-	validator types.Validator,
-	subtractAccount bool,
-) (newShares sdk.Dec, err sdk.Error) {
-	// In some situations, the exchange rate becomes invalid, e.g. if
-	// Validator loses all tokens due to slashing. In this case,
-	// make all future delegations invalid.
-	if validator.InvalidExRate() {
-		return sdk.ZeroDec(), types.ErrDelegatorShareExRateInvalid(k.Codespace())
-	}
-
-	// If The Denomination already exists, we expect there to be only ony
-	// portion specified, which will be split into the same portions of
-	// delegations as the original index token.
-
-	// Delegate For Each Portion
-	totalSubtracted := sdk.NewCoin(
-		k.GetParams(ctx).BondDenom,
-		sdk.ZeroInt(),
-	)
-
-	if subtractAccount {
-		for portion := range portions {
-			// Get Shares for This Validator
-			sharesDenomName := strings.ToLower(fmt.Sprintf(
-				"%s%s",
-				portion.validator.GetSharesDenomPrefix(),
-				k.GetParams(ctx).BondDenom,
-			))
-
-			// Add Shares to Validator
-			validator, newShares = k.AddValidatorTokensAndShares(ctx, portion.validator, portion.amount)
-			k.AfterDelegationModified(ctx, delAddr, validator.OperatorAddress)
-
-			totalSubtracted += totalSubtracted.Add(portion.Amount)
-			_, err := k.bankKeeper.DelegateCoins(
-				ctx,
-				delAddr,
-				sdk.Coins{sdk.NewCoin(k.GetParams(ctx).BondDenom,
-					bondAmt,
-				)})
-
-			if err != nil {
-				return sdk.Dec{}, err
-			}
-		}
-
-		indexCoin := sdk.NewCoin(denomination, totalSubtract)
-		_, _, err = k.bankKeeper.AddCoins(ctx, delAddr, sdk.Coins{indexCoin})
-		if err != nil {
-			return sdk.Dec{}, err
-		}
-
-	}
 
 	return newShares, nil
 }
