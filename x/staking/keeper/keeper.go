@@ -14,14 +14,15 @@ const aminoCacheSize = 500
 
 // keeper of the staking store
 type Keeper struct {
-	storeKey           sdk.StoreKey
-	storeTKey          sdk.StoreKey
-	cdc                *codec.Codec
-	bankKeeper         types.BankKeeper
-	hooks              sdk.StakingHooks
-	paramstore         params.Subspace
-	validatorCache     map[string]cachedValidator
-	validatorCacheList *list.List
+	storeKey            sdk.StoreKey
+	storeTKey           sdk.StoreKey
+	cdc                 *codec.Codec
+	bankKeeper          types.BankKeeper
+	hooks               sdk.StakingHooks
+	paramstore          params.Subspace
+	validatorCache      map[string]cachedValidator
+	validatorCacheList  *list.List
+	denominationBaskets map[string][]int64
 
 	// codespace
 	codespace sdk.CodespaceType
@@ -31,15 +32,16 @@ func NewKeeper(cdc *codec.Codec, key, tkey sdk.StoreKey, bk types.BankKeeper,
 	paramstore params.Subspace, codespace sdk.CodespaceType) Keeper {
 
 	keeper := Keeper{
-		storeKey:           key,
-		storeTKey:          tkey,
-		cdc:                cdc,
-		bankKeeper:         bk,
-		paramstore:         paramstore.WithKeyTable(ParamKeyTable()),
-		hooks:              nil,
-		validatorCache:     make(map[string]cachedValidator, aminoCacheSize),
-		validatorCacheList: list.New(),
-		codespace:          codespace,
+		storeKey:            key,
+		storeTKey:           tkey,
+		cdc:                 cdc,
+		bankKeeper:          bk,
+		paramstore:          paramstore.WithKeyTable(ParamKeyTable()),
+		hooks:               nil,
+		validatorCache:      make(map[string]cachedValidator, aminoCacheSize),
+		validatorCacheList:  list.New(),
+		codespace:           codespace,
+		denominationBaskets: make(map[string][]int64),
 	}
 	return keeper
 }

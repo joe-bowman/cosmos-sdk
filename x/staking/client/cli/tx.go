@@ -141,7 +141,13 @@ $ gaiacli tx staking delegate cosmosvaloper1l2rsakp388kuv9k8qzq6lrm9taddae7fpx59
 				return err
 			}
 
-			msg := staking.NewMsgDelegate(delAddr, valAddr, amount)
+			msg := staking.MsgIndexDelegate{
+				Denomination:     "",
+				DelegatorAddress: delAddr,
+				Portions: []staking.ValidatorPortion{
+					ValidatorPortion{valAddr, amount},
+				},
+			}
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg}, false)
 		},
 	}
