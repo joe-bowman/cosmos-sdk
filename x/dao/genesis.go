@@ -58,7 +58,7 @@ func DefaultGenesisState() GenesisState {
 			VotingPeriod: DefaultPeriod,
 		},
 		TallyParams: TallyParams{
-			Quorum:    sdk.NewDecWithPrec(334, 3),
+			Quorum:    sdk.NewDecWithPrec(2, 1), // TODO: TBD
 			Threshold: sdk.NewDecWithPrec(5, 1),
 			Veto:      sdk.NewDecWithPrec(334, 3),
 		},

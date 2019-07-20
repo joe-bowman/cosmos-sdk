@@ -8,29 +8,33 @@ import (
 
 // Governance message types and routes
 const (
-	TypeMsgDeposit        = "deposit"
-	TypeMsgVote           = "vote"
-	TypeMsgSubmitProposal = "submit_proposal"
+	TypeMsgDepositDao        = "deposit_dao"
+	TypeMsgVoteDao           = "vote_dao"
+	TypeMsgSubmitProposalDao = "submit_proposal_dao"
 
 	MaxDescriptionLength int = 5000
 	MaxTitleLength       int = 140
+	//MaxDenomLength // TODO: TBD
 )
 
-var _, _, _ sdk.Msg = MsgSubmitProposal{}, MsgDeposit{}, MsgVote{}
+var _, _, _ sdk.Msg = MsgSubmitProposalDao{}, MsgDepositDao{}, MsgVoteDao{}
 
 // MsgSubmitProposal
-type MsgSubmitProposal struct {
+type MsgSubmitProposalDao struct {
 	Title          string         `json:"title"`           //  Title of the proposal
 	Description    string         `json:"description"`     //  Description of the proposal
+	// TODO: add Dao Proposal spec with denom, tx, rebalancing
+	Denom 			string
 	ProposalType   ProposalKind   `json:"proposal_type"`   //  Type of proposal. Initial set {PlainTextProposal}
 	Proposer       sdk.AccAddress `json:"proposer"`        //  Address of the proposer
 	InitialDeposit sdk.Coins      `json:"initial_deposit"` //  Initial deposit paid by sender. Must be strictly positive.
 }
 
-func NewMsgSubmitProposal(title, description string, proposalType ProposalKind, proposer sdk.AccAddress, initialDeposit sdk.Coins) MsgSubmitProposal {
-	return MsgSubmitProposal{
+func NewMsgSubmitProposal(title, description string, denom string, proposalType ProposalKind, proposer sdk.AccAddress, initialDeposit sdk.Coins) MsgSubmitProposalDao {
+	return MsgSubmitProposalDao{
 		Title:          title,
 		Description:    description,
+		Denom:			denom,
 		ProposalType:   proposalType,
 		Proposer:       proposer,
 		InitialDeposit: initialDeposit,
@@ -38,11 +42,11 @@ func NewMsgSubmitProposal(title, description string, proposalType ProposalKind, 
 }
 
 //nolint
-func (msg MsgSubmitProposal) Route() string { return RouterKey }
-func (msg MsgSubmitProposal) Type() string  { return TypeMsgSubmitProposal }
+func (msg MsgSubmitProposalDao) Route() string { return RouterKey }
+func (msg MsgSubmitProposalDao) Type() string  { return TypeMsgSubmitProposalDao }
 
 // Implements Msg.
-func (msg MsgSubmitProposal) ValidateBasic() sdk.Error {
+func (msg MsgSubmitProposalDao) ValidateBasic() sdk.Error {
 	if len(msg.Title) == 0 {
 		return ErrInvalidTitle(DefaultCodespace, "No title present in proposal")
 	}
@@ -55,6 +59,7 @@ func (msg MsgSubmitProposal) ValidateBasic() sdk.Error {
 	if len(msg.Description) > MaxDescriptionLength {
 		return ErrInvalidDescription(DefaultCodespace, fmt.Sprintf("Proposal description is longer than max length of %d", MaxDescriptionLength))
 	}
+	//if len(msg.Denom) > MaxDenom // TODO: denom max length
 	if !validProposalType(msg.ProposalType) {
 		return ErrInvalidProposalType(DefaultCodespace, msg.ProposalType)
 	}
@@ -70,30 +75,30 @@ func (msg MsgSubmitProposal) ValidateBasic() sdk.Error {
 	return nil
 }
 
-func (msg MsgSubmitProposal) String() string {
-	return fmt.Sprintf("MsgSubmitProposal{%s, %s, %s, %v}", msg.Title, msg.Description, msg.ProposalType, msg.InitialDeposit)
+func (msg MsgSubmitProposalDao) String() string {
+	return fmt.Sprintf("MsgSubmitProposal{%s, %s, %s, %s, %v}", msg.Title, msg.Description, msg.Denom, msg.ProposalType, msg.InitialDeposit)
 }
 
 // Implements Msg.
-func (msg MsgSubmitProposal) GetSignBytes() []byte {
+func (msg MsgSubmitProposalDao) GetSignBytes() []byte {
 	bz := msgCdc.MustMarshalJSON(msg)
 	return sdk.MustSortJSON(bz)
 }
 
 // Implements Msg.
-func (msg MsgSubmitProposal) GetSigners() []sdk.AccAddress {
+func (msg MsgSubmitProposalDao) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Proposer}
 }
 
 // MsgDeposit
-type MsgDeposit struct {
+type MsgDepositDao struct {
 	ProposalID uint64         `json:"proposal_id"` // ID of the proposal
 	Depositor  sdk.AccAddress `json:"depositor"`   // Address of the depositor
 	Amount     sdk.Coins      `json:"amount"`      // Coins to add to the proposal's deposit
 }
 
-func NewMsgDeposit(depositor sdk.AccAddress, proposalID uint64, amount sdk.Coins) MsgDeposit {
-	return MsgDeposit{
+func NewMsgDeposit(depositor sdk.AccAddress, proposalID uint64, amount sdk.Coins) MsgDepositDao {
+	return MsgDepositDao{
 		ProposalID: proposalID,
 		Depositor:  depositor,
 		Amount:     amount,
@@ -102,11 +107,11 @@ func NewMsgDeposit(depositor sdk.AccAddress, proposalID uint64, amount sdk.Coins
 
 // Implements Msg.
 // nolint
-func (msg MsgDeposit) Route() string { return RouterKey }
-func (msg MsgDeposit) Type() string  { return TypeMsgDeposit }
+func (msg MsgDepositDao) Route() string { return RouterKey }
+func (msg MsgDepositDao) Type() string  { return TypeMsgDepositDao }
 
 // Implements Msg.
-func (msg MsgDeposit) ValidateBasic() sdk.Error {
+func (msg MsgDepositDao) ValidateBasic() sdk.Error {
 	if msg.Depositor.Empty() {
 		return sdk.ErrInvalidAddress(msg.Depositor.String())
 	}
@@ -122,30 +127,30 @@ func (msg MsgDeposit) ValidateBasic() sdk.Error {
 	return nil
 }
 
-func (msg MsgDeposit) String() string {
+func (msg MsgDepositDao) String() string {
 	return fmt.Sprintf("MsgDeposit{%s=>%v: %v}", msg.Depositor, msg.ProposalID, msg.Amount)
 }
 
 // Implements Msg.
-func (msg MsgDeposit) GetSignBytes() []byte {
+func (msg MsgDepositDao) GetSignBytes() []byte {
 	bz := msgCdc.MustMarshalJSON(msg)
 	return sdk.MustSortJSON(bz)
 }
 
 // Implements Msg.
-func (msg MsgDeposit) GetSigners() []sdk.AccAddress {
+func (msg MsgDepositDao) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Depositor}
 }
 
 // MsgVote
-type MsgVote struct {
+type MsgVoteDao struct {
 	ProposalID uint64         `json:"proposal_id"` // ID of the proposal
 	Voter      sdk.AccAddress `json:"voter"`       //  address of the voter
 	Option     VoteOption     `json:"option"`      //  option from OptionSet chosen by the voter
 }
 
-func NewMsgVote(voter sdk.AccAddress, proposalID uint64, option VoteOption) MsgVote {
-	return MsgVote{
+func NewMsgVoteDao(voter sdk.AccAddress, proposalID uint64, option VoteOption) MsgVoteDao {
+	return MsgVoteDao{
 		ProposalID: proposalID,
 		Voter:      voter,
 		Option:     option,
@@ -154,11 +159,11 @@ func NewMsgVote(voter sdk.AccAddress, proposalID uint64, option VoteOption) MsgV
 
 // Implements Msg.
 // nolint
-func (msg MsgVote) Route() string { return RouterKey }
-func (msg MsgVote) Type() string  { return TypeMsgVote }
+func (msg MsgVoteDao) Route() string { return RouterKey }
+func (msg MsgVoteDao) Type() string  { return TypeMsgVoteDao }
 
 // Implements Msg.
-func (msg MsgVote) ValidateBasic() sdk.Error {
+func (msg MsgVoteDao) ValidateBasic() sdk.Error {
 	if msg.Voter.Empty() {
 		return sdk.ErrInvalidAddress(msg.Voter.String())
 	}
@@ -171,17 +176,17 @@ func (msg MsgVote) ValidateBasic() sdk.Error {
 	return nil
 }
 
-func (msg MsgVote) String() string {
+func (msg MsgVoteDao) String() string {
 	return fmt.Sprintf("MsgVote{%v - %s}", msg.ProposalID, msg.Option)
 }
 
 // Implements Msg.
-func (msg MsgVote) GetSignBytes() []byte {
+func (msg MsgVoteDao) GetSignBytes() []byte {
 	bz := msgCdc.MustMarshalJSON(msg)
 	return sdk.MustSortJSON(bz)
 }
 
 // Implements Msg.
-func (msg MsgVote) GetSigners() []sdk.AccAddress {
+func (msg MsgVoteDao) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Voter}
 }
