@@ -35,7 +35,6 @@ func TestMsgSubmitProposal(t *testing.T) {
 		{"", "the purpose of this proposal is to test", ProposalTypeText, addrs[0], coinsPos, false},
 		{"Test Proposal", "", ProposalTypeText, addrs[0], coinsPos, false},
 		{"Test Proposal", "the purpose of this proposal is to test", ProposalTypeParameterChange, addrs[0], coinsPos, true},
-		{"Test Proposal", "the purpose of this proposal is to test", ProposalTypeSoftwareUpgrade, addrs[0], coinsPos, true},
 		{"Test Proposal", "the purpose of this proposal is to test", 0x05, addrs[0], coinsPos, false},
 		{"Test Proposal", "the purpose of this proposal is to test", ProposalTypeText, sdk.AccAddress{}, coinsPos, false},
 		{"Test Proposal", "the purpose of this proposal is to test", ProposalTypeText, addrs[0], coinsZero, true},
