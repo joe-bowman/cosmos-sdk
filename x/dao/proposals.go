@@ -90,22 +90,6 @@ func (tp TextProposal) GetTitle() string           { return tp.Title }
 func (tp TextProposal) GetDescription() string     { return tp.Description }
 func (tp TextProposal) ProposalType() ProposalKind { return ProposalTypeText }
 
-// Software Upgrade Proposals
-type SoftwareUpgradeProposal struct {
-	TextProposal
-}
-
-func NewSoftwareUpgradeProposal(title, description string) SoftwareUpgradeProposal {
-	return SoftwareUpgradeProposal{
-		TextProposal: NewTextProposal(title, description),
-	}
-}
-
-// Implements Proposal Interface
-var _ ProposalContent = SoftwareUpgradeProposal{}
-
-// nolint
-func (sup SoftwareUpgradeProposal) ProposalType() ProposalKind { return ProposalTypeSoftwareUpgrade }
 
 // ProposalQueue
 type ProposalQueue []uint64
@@ -119,9 +103,7 @@ type ProposalKind byte
 const (
 	ProposalTypeNil             ProposalKind = 0x00
 	ProposalTypeText            ProposalKind = 0x01
-	ProposalTypeParameterChange ProposalKind = 0x02
-	ProposalTypeSoftwareUpgrade ProposalKind = 0x03
-	ProposalTypeRebalancing ProposalKind = 0x04
+	ProposalTypeRebalancing 	ProposalKind = 0x02
 )
 
 // String to proposalType byte. Returns 0xff if invalid.
@@ -129,10 +111,9 @@ func ProposalTypeFromString(str string) (ProposalKind, error) {
 	switch str {
 	case "Text":
 		return ProposalTypeText, nil
-	case "ParameterChange":
-		return ProposalTypeParameterChange, nil
-	case "SoftwareUpgrade":
-		return ProposalTypeSoftwareUpgrade, nil
+	case "Rebalancing":
+		return ProposalTypeRebalancing, nil
+	// TODO: add case rebalancing
 	default:
 		return ProposalKind(0xff), fmt.Errorf("'%s' is not a valid proposal type", str)
 	}
@@ -141,8 +122,7 @@ func ProposalTypeFromString(str string) (ProposalKind, error) {
 // is defined ProposalType?
 func validProposalType(pt ProposalKind) bool {
 	if pt == ProposalTypeText ||
-		pt == ProposalTypeParameterChange ||
-		pt == ProposalTypeSoftwareUpgrade {
+		pt ==ProposalTypeRebalancing {
 		return true
 	}
 	return false
@@ -185,10 +165,8 @@ func (pt ProposalKind) String() string {
 	switch pt {
 	case ProposalTypeText:
 		return "Text"
-	case ProposalTypeParameterChange:
-		return "ParameterChange"
-	case ProposalTypeSoftwareUpgrade:
-		return "SoftwareUpgrade"
+	case ProposalTypeRebalancing:
+		return "Rebalancing"
 	default:
 		return ""
 	}

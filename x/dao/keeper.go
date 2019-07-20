@@ -14,13 +14,13 @@ const (
 	// ModuleKey is the name of the module
 	ModuleName = "dao"
 
-	// StoreKey is the store key string for gov
+	// StoreKey is the store key string for dao
 	StoreKey = ModuleName
 
-	// RouterKey is the message route for gov
+	// RouterKey is the message route for dao
 	RouterKey = ModuleName
 
-	// QuerierRoute is the querier route for gov
+	// QuerierRoute is the querier route for dao
 	QuerierRoute = ModuleName
 
 	// Parameter store default namestore
@@ -47,12 +47,12 @@ func ParamKeyTable() params.KeyTable {
 	)
 }
 
-// Governance Keeper
+// Dao Keeper
 type Keeper struct {
 	// The reference to the Param Keeper to get and set Global Params
 	paramsKeeper params.Keeper
 
-	// The reference to the Paramstore to get and set gov specific params
+	// The reference to the Paramstore to get and set dao specific params
 	paramSpace params.Subspace
 
 	// The reference to the CoinKeeper to modify balances
@@ -74,8 +74,8 @@ type Keeper struct {
 	codespace sdk.CodespaceType
 }
 
-// NewKeeper returns a governance keeper. It handles:
-// - submitting governance proposals
+// NewKeeper returns a dao keeper. It handles:
+// - submitting dao proposals
 // - depositing funds into proposals, and activating upon sufficient funds being deposited
 // - users voting on proposals, with weight proportional to stake in the system
 // - and tallying the result of the vote.

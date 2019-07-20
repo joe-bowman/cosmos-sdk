@@ -116,7 +116,7 @@ $ gaiacli gov submit-proposal --title="Test Proposal" --description="My awesome 
 
 	cmd.Flags().String(flagTitle, "", "title of proposal")
 	cmd.Flags().String(flagDescription, "", "description of proposal")
-	cmd.Flags().String(flagProposalType, "", "proposalType of proposal, types: text/parameter_change/software_upgrade")
+	cmd.Flags().String(flagProposalType, "", "proposalType of proposal, types: text/parameter_change")
 	cmd.Flags().String(flagDeposit, "", "deposit of proposal")
 	cmd.Flags().String(flagProposal, "", "proposal file path (if this path is given, other proposal flags are ignored)")
 
