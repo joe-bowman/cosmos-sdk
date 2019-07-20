@@ -454,66 +454,115 @@ func (k Keeper) Delegate(ctx sdk.Context, delAddr sdk.AccAddress, bondAmt sdk.In
 	return newShares, nil
 }
 
-func (k Keeper) DelegateIndex(
+// When First Delegating Vouchers to Multipl Validators, Create a New Index
+func (k Keeper) NewIndex(
 	ctx sdk.Context,
 	delAddr sdk.AccAddress,
 	portions []types.ValidatorPortion,
 	denomination string,
-	validator types.Validator,
 	subtractAccount bool,
 ) (newShares sdk.Dec, err sdk.Error) {
-	// In some situations, the exchange rate becomes invalid, e.g. if
-	// Validator loses all tokens due to slashing. In this case,
-	// make all future delegations invalid.
-	if validator.InvalidExRate() {
-		return sdk.ZeroDec(), types.ErrDelegatorShareExRateInvalid(k.Codespace())
-	}
-
-	// If The Denomination already exists, we expect there to be only ony
-	// portion specified, which will be split into the same portions of
-	// delegations as the original index token.
-
-	// Delegate For Each Portion
+	// We will delegate to each validator one by one, and track how much we
+	// delegate in total in this counter.
 	totalSubtracted := sdk.NewCoin(
 		k.GetParams(ctx).BondDenom,
 		sdk.ZeroInt(),
 	)
 
+	// Create Our Shares List, this is the underlying representation of our
+	// index vouchers.
+	sharesList := make([]types.ValidatorPortion, 0)
+
 	if subtractAccount {
-		for portion := range portions {
-			// Get Shares for This Validator
+		// For each portion, delegate and track total amount delegated.
+		for _, portion := range portions {
+			validator, _ := k.GetValidator(ctx, portion.ValidatorAddress)
+			// In some situations, the exchange rate becomes invalid, e.g.
+			// if Validator loses all tokens due to slashing. In this case,
+			// make all future delegations invalid.
+			if validator.InvalidExRate() {
+				return sdk.ZeroDec(), types.ErrDelegatorShareExRateInvalid(k.Codespace())
+			}
+
+			// Add Shares/Tokens to the Validator we're delegating too.
+			validator, newShares := k.AddValidatorTokensAndShares(ctx, validator, portion.Amount.Amount)
+			k.AfterDelegationModified(ctx, delAddr, validator.OperatorAddress)
+
+			// Find the name of the shares this validator provides.
 			sharesDenomName := strings.ToLower(fmt.Sprintf(
 				"%s%s",
-				portion.validator.GetSharesDenomPrefix(),
+				validator.GetSharesDenomPrefix(),
 				k.GetParams(ctx).BondDenom,
 			))
 
-			// Add Shares to Validator
-			validator, newShares = k.AddValidatorTokensAndShares(ctx, portion.validator, portion.amount)
-			k.AfterDelegationModified(ctx, delAddr, validator.OperatorAddress)
+			// Create a Coin for this delegation.
+			shares := sdk.NewCoin(sharesDenomName, newShares.TruncateInt())
+			sharesList = append(sharesList, types.ValidatorPortion{
+				ValidatorAddress: portion.ValidatorAddress,
+				Amount:           shares,
+			})
 
-			totalSubtracted += totalSubtracted.Add(portion.Amount)
-			_, err := k.bankKeeper.DelegateCoins(
-				ctx,
-				delAddr,
-				sdk.Coins{sdk.NewCoin(k.GetParams(ctx).BondDenom,
-					bondAmt,
-				)})
-
-			if err != nil {
-				return sdk.Dec{}, err
-			}
+			// Track Total Delegated
+			totalSubtracted = totalSubtracted.Add(portion.Amount)
 		}
+	}
 
-		indexCoin := sdk.NewCoin(denomination, totalSubtract)
-		_, _, err = k.bankKeeper.AddCoins(ctx, delAddr, sdk.Coins{indexCoin})
-		if err != nil {
-			return sdk.Dec{}, err
-		}
+	// Consume Total Delegated Coins from Account
+	_, err = k.bankKeeper.DelegateCoins(
+		ctx,
+		delAddr,
+		sdk.Coins{totalSubtracted},
+	)
 
+	if err != nil {
+		return sdk.Dec{}, err
+	}
+
+	// Mint Our Shares Coin (Index), and Add to the delegators wallet.
+	indexCoin := sdk.NewCoin(denomination, totalSubtracted.Amount)
+	_, _, err = k.bankKeeper.AddCoins(ctx, delAddr, sdk.Coins{indexCoin})
+	if err != nil {
+		return sdk.Dec{}, err
 	}
 
 	return newShares, nil
+}
+
+// When an Index already exists, purchase tokens with a % split accross the
+// total number of staking tokens passed in.
+func (k Keeper) ExistingIndex(
+	ctx sdk.Context,
+	delAddr sdk.AccAddress,
+	amount sdk.Coin,
+	denomination string,
+	subtractAccount bool,
+) (newShares sdk.Dec, err sdk.Error) {
+	return sdk.Dec{}, nil
+}
+
+func (k Keeper) DelegateIndex(
+	ctx sdk.Context,
+	delAddr sdk.AccAddress,
+	portions []types.ValidatorPortion,
+	denomination string,
+	subtractAccount bool,
+) (newShares sdk.Dec, err sdk.Error) {
+	// Attempt to get existing denomination, if it exists, this is a
+	// delegation to an existing voucher.
+	percentages := k.GetDenomPercentages(denomination)
+	if percentages != nil {
+		if len(portions) != 1 {
+			return sdk.ZeroDec(), nil
+		}
+
+		portion := portions[0]
+		amount := portion.Amount
+		k.ExistingIndex(ctx, delAddr, amount, denomination, subtractAccount)
+	} else {
+		k.NewIndex(ctx, delAddr, portions, denomination, subtractAccount)
+	}
+
+	return sdk.Dec{}, nil
 }
 
 // unbond a particular delegation and perform associated store operations
