@@ -3,6 +3,7 @@ package dao
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/x/staking"
 	"strings"
 	"time"
 
@@ -94,16 +95,21 @@ func (tp TextProposal) GetDescription() string     { return tp.Description }
 func (tp TextProposal) ProposalType() ProposalKind { return ProposalTypeText }
 
 
+// TODO: need to declare in staking module
+type Rebalancing []staking.MsgBeginRedelegate // list of redelegation pairs
+
 // Rebalancing Proposals
 type RebalancingProposal struct {
 	Title       string `json:"title"`       //  Title of the proposal
 	Description string `json:"description"` //  Description of the proposal
+	Rebalancing Rebalancing `json:"rebalancing"` // list of redelegation pairs
 }
 
-func NewRebalancingProposal(title, description string) RebalancingProposal {
+func NewRebalancingProposal(title, description string, rebalancing Rebalancing) RebalancingProposal {
 	return RebalancingProposal{
 		Title:       title,
 		Description: description,
+		Rebalancing: rebalancing,
 	}
 }
 
@@ -113,6 +119,7 @@ var _ ProposalContent = RebalancingProposal{}
 // nolint
 func (rp RebalancingProposal) GetTitle() string           { return rp.Title }
 func (rp RebalancingProposal) GetDescription() string     { return rp.Description }
+func (rp RebalancingProposal) GetRebalancing() Rebalancing { return rp.Rebalancing }
 func (rp RebalancingProposal) ProposalType() ProposalKind { return ProposalTypeText }
 
 

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/x/dao"
 	"strconv"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
@@ -9,13 +10,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtxb "github.com/cosmos/cosmos-sdk/x/auth/client/txbuilder"
-	"github.com/cosmos/cosmos-sdk/x/gov"
-
 	"strings"
 
 	"github.com/spf13/cobra"
 
-	govClientUtils "github.com/cosmos/cosmos-sdk/x/gov/client/utils"
+	daoClientUtils "github.com/cosmos/cosmos-sdk/x/dao/client/utils"
 )
 
 const (
@@ -29,11 +28,14 @@ const (
 	flagStatus       = "status"
 	flagNumLimit     = "limit"
 	flagProposal     = "proposal"
+	flagDenom = "denom"
+	flagAmount = "amount"
 )
 
 type proposal struct {
 	Title       string
 	Description string
+	Denom string
 	Type        string
 	Deposit     string
 }
@@ -45,8 +47,9 @@ var proposalFlags = []string{
 	flagDeposit,
 }
 
-// GetCmdSubmitProposal implements submitting a proposal transaction command.
-func GetCmdSubmitProposal(cdc *codec.Codec) *cobra.Command {
+// TODO: SubmitProposal DAO must contain redelegation object, so need to broadcast json not cli
+// GetCmdSubmitProposalDao implements submitting a proposal transaction command.
+func GetCmdSubmitProposalDao(cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "submit-proposal",
 		Short: "Submit a proposal along with an initial deposit",
@@ -60,6 +63,7 @@ where proposal.json contains:
 {
   "title": "Test Proposal",
   "description": "My awesome proposal",
+  "denom": "index1",
   "type": "Text",
   "deposit": "10test"
 }
@@ -99,12 +103,12 @@ $ gaiacli gov submit-proposal --title="Test Proposal" --description="My awesome 
 				return fmt.Errorf("address %s doesn't have enough coins to pay for this transaction", from)
 			}
 
-			proposalType, err := gov.ProposalTypeFromString(proposal.Type)
+			proposalType, err := dao.ProposalTypeFromString(proposal.Type)
 			if err != nil {
 				return err
 			}
 
-			msg := gov.NewMsgSubmitProposal(proposal.Title, proposal.Description, proposalType, from, amount)
+			msg := dao.NewMsgSubmitProposal(proposal.Title, proposal.Description, denom, proposalType, from, amount, dao.Rebalancing{})
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
@@ -123,8 +127,8 @@ $ gaiacli gov submit-proposal --title="Test Proposal" --description="My awesome 
 	return cmd
 }
 
-// GetCmdDeposit implements depositing tokens for an active proposal.
-func GetCmdDeposit(queryRoute string, cdc *codec.Codec) *cobra.Command {
+// GetCmdDepositDao implements depositing tokens for an active proposal.
+func GetCmdDepositDao(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use:   "deposit [proposal-id] [deposit]",
 		Args:  cobra.ExactArgs(2),
@@ -147,7 +151,7 @@ $ gaiacli tx gov deposit 1 10stake --from mykey
 			}
 
 			// check to see if the proposal is in the store
-			_, err = govClientUtils.QueryProposalByID(proposalID, cliCtx, cdc, queryRoute)
+			_, err = daoClientUtils.QueryProposalByID(proposalID, cliCtx, cdc, queryRoute)
 			if err != nil {
 				return fmt.Errorf("Failed to fetch proposal-id %d: %s", proposalID, err)
 			}
@@ -171,7 +175,7 @@ $ gaiacli tx gov deposit 1 10stake --from mykey
 				return fmt.Errorf("address %s doesn't have enough coins to pay for this transaction", from)
 			}
 
-			msg := gov.NewMsgDeposit(from, proposalID, amount)
+			msg := dao.NewMsgDeposit(from, proposalID, amount)
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
@@ -182,12 +186,12 @@ $ gaiacli tx gov deposit 1 10stake --from mykey
 	}
 }
 
-// GetCmdVote implements creating a new vote command.
-func GetCmdVote(queryRoute string, cdc *codec.Codec) *cobra.Command {
+// GetCmdVoteDao implements creating a new vote command.
+func GetCmdVoteDao(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:   "vote [proposal-id] [option]",
-		Args:  cobra.ExactArgs(2),
-		Short: "Vote for an active proposal, options: yes/no/no_with_veto/abstain",
+		Use:   "vote [proposal-id] [option] [amount]",
+		Args:  cobra.ExactArgs(3),
+		Short: "Vote for an active proposal, options: yes/no/no_with_veto/abstain, amount: amount of the proposal Denom for voting, it will be Staked in voting period",
 		Long: strings.TrimSpace(`
 Submit a vote for an acive proposal. You can find the proposal-id by running gaiacli query gov proposals:
 
@@ -209,19 +213,36 @@ $ gaiacli tx gov vote 1 yes --from mykey
 			}
 
 			// check to see if the proposal is in the store
-			_, err = govClientUtils.QueryProposalByID(proposalID, cliCtx, cdc, queryRoute)
+			_, err = daoClientUtils.QueryProposalByID(proposalID, cliCtx, cdc, queryRoute)
 			if err != nil {
 				return fmt.Errorf("Failed to fetch proposal-id %d: %s", proposalID, err)
 			}
 
 			// Find out which vote option user chose
-			byteVoteOption, err := gov.VoteOptionFromString(govClientUtils.NormalizeVoteOption(args[1]))
+			byteVoteOption, err := dao.VoteOptionFromString(daoClientUtils.NormalizeVoteOption(args[1]))
 			if err != nil {
 				return err
 			}
 
+			// parse coins trying to be sent
+			coin, err := sdk.ParseCoin(args[1])
+			if err != nil {
+				return err
+			}
+
+			// Pull associated account
+			account, err := cliCtx.GetAccount(from)
+			if err != nil {
+				return err
+			}
+
+			// ensure account has enough coins
+			if !account.GetCoins().IsAllGTE(sdk.Coins{coin}) {
+				return fmt.Errorf("address %s doesn't have enough coins to pay for this transaction", from)
+			}
+
 			// Build vote message and run basic validation
-			msg := gov.NewMsgVote(from, proposalID, byteVoteOption)
+			msg := dao.NewMsgVoteDao(from, proposalID, byteVoteOption, coin)
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
