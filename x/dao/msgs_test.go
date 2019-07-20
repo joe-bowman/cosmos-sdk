@@ -21,6 +21,7 @@ func init() {
 	coinsMulti.Sort()
 }
 
+// TODO: TBD debugging after dao spec complete
 // test ValidateBasic for MsgCreateValidator
 func TestMsgSubmitProposal(t *testing.T) {
 	_, addrs, _, _ := mock.CreateGenAccounts(1, sdk.NewCoins())
