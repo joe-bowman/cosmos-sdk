@@ -25,6 +25,7 @@ func newValidatorGovInfo(address sdk.ValAddress, bondedTokens sdk.Int, delegator
 	}
 }
 
+// TODO: using Totla supply of proposal denom, not del power
 // TODO: Break into several smaller functions for clarity
 func tally(ctx sdk.Context, keeper Keeper, proposal Proposal) (passes bool, tallyResults TallyResult) {
 	results := make(map[VoteOption]sdk.Dec)

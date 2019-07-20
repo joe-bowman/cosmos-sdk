@@ -11,12 +11,12 @@ import (
 func NewHandler(keeper Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
-		case MsgDeposit:
-			return handleMsgDeposit(ctx, keeper, msg)
-		case MsgSubmitProposal:
-			return handleMsgSubmitProposal(ctx, keeper, msg)
-		case MsgVote:
-			return handleMsgVote(ctx, keeper, msg)
+		case MsgDepositDao:
+			return handleMsgDepositDao(ctx, keeper, msg)
+		case MsgSubmitProposalDao:
+			return handleMsgSubmitProposalDao(ctx, keeper, msg)
+		case MsgVoteDao:
+			return handleMsgVoteDao(ctx, keeper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized gov msg type: %T", msg)
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -24,7 +24,7 @@ func NewHandler(keeper Keeper) sdk.Handler {
 	}
 }
 
-func handleMsgSubmitProposal(ctx sdk.Context, keeper Keeper, msg MsgSubmitProposal) sdk.Result {
+func handleMsgSubmitProposalDao(ctx sdk.Context, keeper Keeper, msg MsgSubmitProposalDao) sdk.Result {
 	var content ProposalContent
 	switch msg.ProposalType {
 	case ProposalTypeText:
@@ -59,7 +59,7 @@ func handleMsgSubmitProposal(ctx sdk.Context, keeper Keeper, msg MsgSubmitPropos
 	}
 }
 
-func handleMsgDeposit(ctx sdk.Context, keeper Keeper, msg MsgDeposit) sdk.Result {
+func handleMsgDepositDao(ctx sdk.Context, keeper Keeper, msg MsgDepositDao) sdk.Result {
 	err, votingStarted := keeper.AddDeposit(ctx, msg.ProposalID, msg.Depositor, msg.Amount)
 	if err != nil {
 		return err.Result()
@@ -80,8 +80,8 @@ func handleMsgDeposit(ctx sdk.Context, keeper Keeper, msg MsgDeposit) sdk.Result
 	}
 }
 
-func handleMsgVote(ctx sdk.Context, keeper Keeper, msg MsgVote) sdk.Result {
-	err := keeper.AddVote(ctx, msg.ProposalID, msg.Voter, msg.Option)
+func handleMsgVoteDao(ctx sdk.Context, keeper Keeper, msg MsgVoteDao) sdk.Result {
+	err := keeper.AddVote(ctx, msg.ProposalID, msg.Voter, msg.Option, msg.VoteAmount)
 	if err != nil {
 		return err.Result()
 	}

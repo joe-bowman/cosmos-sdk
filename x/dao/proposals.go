@@ -17,7 +17,7 @@ type Proposal struct {
 	ProposalID uint64 `json:"proposal_id"` //  ID of the proposal
 
 	Denom string `json:"denom"` // denom for DAO Proposal
-	TotalStake		sdk.Coin  // for DAO voting, need to staking for prevent double voting
+	TotalDaoStake		sdk.Coin  // for DAO voting, need to staking for prevent double voting
 
 	Status           ProposalStatus `json:"proposal_status"`    //  Status of the Proposal {Pending, Active, Passed, Rejected}
 	FinalTallyResult TallyResult    `json:"final_tally_result"` //  Result of Tallys
@@ -92,6 +92,28 @@ var _ ProposalContent = TextProposal{}
 func (tp TextProposal) GetTitle() string           { return tp.Title }
 func (tp TextProposal) GetDescription() string     { return tp.Description }
 func (tp TextProposal) ProposalType() ProposalKind { return ProposalTypeText }
+
+
+// Rebalancing Proposals
+type RebalancingProposal struct {
+	Title       string `json:"title"`       //  Title of the proposal
+	Description string `json:"description"` //  Description of the proposal
+}
+
+func NewRebalancingProposal(title, description string) RebalancingProposal {
+	return RebalancingProposal{
+		Title:       title,
+		Description: description,
+	}
+}
+
+// Implements Proposal Interface
+var _ ProposalContent = RebalancingProposal{}
+
+// nolint
+func (rp RebalancingProposal) GetTitle() string           { return rp.Title }
+func (rp RebalancingProposal) GetDescription() string     { return rp.Description }
+func (rp RebalancingProposal) ProposalType() ProposalKind { return ProposalTypeText }
 
 
 // ProposalQueue
