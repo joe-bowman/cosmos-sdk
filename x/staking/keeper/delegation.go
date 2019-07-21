@@ -621,7 +621,6 @@ func (k Keeper) DelegateIndex(
 		if len(portions) != 1 {
 			return sdk.ZeroDec(), nil
 		}
-
 		portion := portions[0]
 		amount := portion.Amount
 		k.ExistingIndex(ctx, delAddr, amount, denomination, subtractAccount)
@@ -639,22 +638,64 @@ func (k Keeper) RebalanceIndex(
 	denomination string,
 	subtractAccount bool,
 ) (newShares sdk.Dec, err sdk.Error) {
+	// Attempt to get Basket, It must already exist in order to
+	// rebalance the tokens within it.
 	basket, ok := k.denominationBaskets[denomination]
 	if !ok {
 		return sdk.Dec{}, nil
 	}
 
-	// For Each Portion, Find Old Portion and Calculate Difference
-	// to either delegate or unbond.
-	for _, portion := range portions {
-		// Find Existing Delegation if Exists
-		difference := sdk.ZeroInt()
-		for _, existing := range basket {
-			if existing.ValidatorAddress.Equals(portion.ValidatorAddress) {
-				difference = existing.Amount.Amount
-			}
+	// HACK: Just Undelegate All Currencies
+	for _, portion := range basket {
+		// Find Validator for Delegation
+		validator, _ := k.GetValidator(ctx, portion.ValidatorAddress)
+		if validator.InvalidExRate() {
+			return sdk.ZeroDec(), types.ErrDelegatorShareExRateInvalid(k.Codespace())
 		}
+
+		// We Need to Lower Tokens and Shares for the Undelegation
+		validator, _ = k.RemoveValidatorTokensAndShares(ctx, validator, portion.Amount.Amount.ToDec())
+		k.SetValidator(ctx, validator)
+
+		// Now We Need to Undelegate the Coins as Well
+		k.bankKeeper.UndelegateCoins(
+			ctx,
+			delAddr,
+			sdk.Coins{portion.Amount},
+		)
 	}
+
+	// Create a NEW shares list, this will overwrite the current entry after
+	// all delegations are rebalanced.
+	sharesList := make([]types.ValidatorPortion, 0)
+
+	// HACK: Redelegate All Tokens, Vouchers Stay the Same, Composition Changed
+	for _, portion := range portions {
+		validator, _ := k.GetValidator(ctx, portion.ValidatorAddress)
+		if validator.InvalidExRate() {
+			return sdk.ZeroDec(), types.ErrDelegatorShareExRateInvalid(k.Codespace())
+		}
+
+		validator, newShares := k.AddValidatorTokensAndShares(ctx, validator, portion.Amount.Amount)
+		k.AfterDelegationModified(ctx, delAddr, validator.OperatorAddress)
+
+		// Find the name of the shares this validator provides.
+		sharesDenomName := strings.ToLower(fmt.Sprintf(
+			"%s%s",
+			validator.GetSharesDenomPrefix(),
+			k.GetParams(ctx).BondDenom,
+		))
+
+		// Create a Coin for this delegation.
+		shares := sdk.NewCoin(sharesDenomName, newShares.TruncateInt())
+		sharesList = append(sharesList, types.ValidatorPortion{
+			ValidatorAddress: portion.ValidatorAddress,
+			Amount:           shares,
+		})
+	}
+
+	// Overwrite our Index Representation
+	k.denominationBaskets[denomination] = sharesList
 
 	return sdk.Dec{}, nil
 }
@@ -809,8 +850,13 @@ func (k Keeper) CompleteUnbonding(ctx sdk.Context, delAddr sdk.AccAddress,
 }
 
 // begin unbonding / redelegation; create a redelegation record
-func (k Keeper) BeginRedelegation(ctx sdk.Context, delAddr sdk.AccAddress,
-	valSrcAddr, valDstAddr sdk.ValAddress, sharesAmount sdk.Dec) (
+func (k Keeper) BeginRedelegation(
+	ctx sdk.Context,
+	delAddr sdk.AccAddress,
+	valSrcAddr,
+	valDstAddr sdk.ValAddress,
+	sharesAmount sdk.Dec,
+) (
 	completionTime time.Time, errSdk sdk.Error) {
 
 	if bytes.Equal(valSrcAddr, valDstAddr) {

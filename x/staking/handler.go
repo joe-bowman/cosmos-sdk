@@ -281,13 +281,6 @@ func handleMsgIndexRebalance(
 	msg types.MsgIndexRebalance,
 	k keeper.Keeper,
 ) sdk.Result {
-	// Attempt to get Basket, It must already exist in order to
-	// rebalance the tokens within it.
-	basket, ok := k.denominationBaskets[denomination]
-	if !ok {
-		return sdk.Dec{}, nil
-	}
-
 	// For Each Portion, Rebalance Position
 	k.RebalanceIndex(
 		ctx,
