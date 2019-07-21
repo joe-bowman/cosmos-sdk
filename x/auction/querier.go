@@ -25,7 +25,7 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 }
 
 func queryAuctions(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) (res []byte, err sdk.Error) {
-	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, keeper.GetLiveAuctions(ctx))
+	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, keeper.GetAllAuctions(ctx))
 	if err2 != nil {
 		panic("could not marshal result to JSON")
 	}

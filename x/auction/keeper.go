@@ -27,6 +27,7 @@ type Keeper struct {
 
 type AuctionRef struct {
 	Id      ID
+	Denom   string
 	EndTime int64
 }
 
@@ -71,7 +72,7 @@ func (k Keeper) startAuction(ctx sdk.Context, auction Auction) (ID, sdk.Error) {
 	auction.SetID(newAuctionID)
 
 	// store auction
-	k.setAuction(ctx, auction)
+	k.setAuction(ctx, auction, false)
 	k.incrementNextAuctionID(ctx)
 	return newAuctionID, nil
 }
@@ -113,7 +114,7 @@ func (k Keeper) PlaceBid(ctx sdk.Context, auctionID ID, bidder sdk.AccAddress, b
 	auction.SetBid(bid)
 	auction.SetBidder(bidder)
 	// store updated auction
-	k.setAuction(ctx, auction)
+	k.setAuction(ctx, auction, true)
 
 	return nil
 }
@@ -132,8 +133,15 @@ func (k Keeper) CloseAuction(ctx sdk.Context, auctionID ID) sdk.Error {
 		return sdk.ErrInternal(fmt.Sprintf("auction can't be closed as curent block height (%v) is under auction end time (%v)", ctx.BlockHeight(), auction.GetEndTime()))
 	}
 
+	if auction.GetStatus() == "Ended" {
+		return sdk.ErrInternal("auction already ended")
+	}
+	auction.SetStatus("Ended")
+	k.setAuction(ctx, auction, true)
+
 	if auction.GetBid().Denom == "uatom" && auction.GetBid().Amount.GT(sdk.ZeroInt()) {
 		k.stakingKeeper.RepatriateFeeEarnings(ctx, auction.GetLot(), auction.GetBid())
+		fmt.Println("WINNER WINNER CHICKEN DINNER")
 	} else {
 		k.stakingKeeper.RollOverFeesFromAuction(ctx, auction.GetLot())
 	}
@@ -184,10 +192,11 @@ func (k Keeper) incrementNextAuctionID(ctx sdk.Context) sdk.Error {
 
 // setAuction puts the auction into the database and adds it to the queue
 // it overwrites any pre-existing auction with same ID
-func (k Keeper) setAuction(ctx sdk.Context, auction Auction) {
+func (k Keeper) setAuction(ctx sdk.Context, auction Auction, updateOnly bool) {
 	// remove the auction from the queue if it is already in there
 	existingAuction, found := k.GetAuction(ctx, auction.GetID())
-	if found {
+
+	if found && !updateOnly {
 		k.RemoveFromList(ctx, existingAuction.GetEndTime(), existingAuction.GetID())
 	}
 
@@ -197,12 +206,13 @@ func (k Keeper) setAuction(ctx sdk.Context, auction Auction) {
 	store.Set(k.getAuctionKey(auction.GetID()), bz)
 
 	// add to the queue
-	k.AddToList(ctx, auction.GetEndTime(), auction.GetID())
+	if !updateOnly {
+		k.AddToList(ctx, auction.GetEndTime(), auction.GetID(), auction.GetLot().Denom)
+	}
 }
 
-func (k Keeper) AddToList(ctx sdk.Context, endTime int64, id ID) {
+func (k Keeper) AddToList(ctx sdk.Context, endTime int64, id ID, denom string) {
 	var refs AuctionRefs
-
 	store := ctx.KVStore(k.storeKey)
 
 	bz := store.Get(k.getLiveAuctionListKey())
@@ -210,9 +220,8 @@ func (k Keeper) AddToList(ctx sdk.Context, endTime int64, id ID) {
 		k.cdc.MustUnmarshalBinaryLengthPrefixed(bz, &refs)
 	}
 
-	newRef := AuctionRef{id, endTime}
+	newRef := AuctionRef{id, denom, endTime}
 	refs.Refs = append(refs.Refs, newRef)
-	fmt.Printf("REFS: %v", refs)
 	bz = k.cdc.MustMarshalBinaryLengthPrefixed(refs)
 	store.Set(k.getLiveAuctionListKey(), bz)
 	return
@@ -303,6 +312,10 @@ func (k Keeper) GetLiveAuctions(ctx sdk.Context) (result []Auction) {
 	return k.GetAuctions(ctx, k.getLiveAuctionListKey())
 }
 
+func (k Keeper) GetAllAuctions(ctx sdk.Context) (result []Auction) {
+	return append(k.GetPastAuctions(ctx), k.GetLiveAuctions(ctx)...)
+}
+
 // GetAuction gets an auction from the store by auctionID
 func (k Keeper) GetAuction(ctx sdk.Context, auctionID ID) (Auction, bool) {
 	var auction Auction
@@ -356,6 +369,3 @@ func (k Keeper) GetAuctionIterator(ctx sdk.Context) sdk.Iterator {
 	store := ctx.KVStore(k.storeKey)
 	return sdk.KVStorePrefixIterator(store, []byte("auction"))
 }
-
-var queueKeyPrefix = []byte("queue")
-var keyDelimiter = []byte(":")

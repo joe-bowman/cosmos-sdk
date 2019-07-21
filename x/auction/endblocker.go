@@ -9,7 +9,7 @@ import (
 // EndBlocker runs at the end of every block.
 func EndBlocker(ctx sdk.Context, k Keeper) sdk.Tags {
 
-	if ctx.BlockHeight()%FeeAuctionFrequency == 0 {
+	if ctx.BlockHeight()%FeeAuctionFrequency == 10 {
 		// trigger auction starts for each fee denom in collective validatorsets.
 		feePools := k.stakingKeeper.CollectFeePoolsForAuction(ctx)
 
@@ -26,6 +26,13 @@ func EndBlocker(ctx sdk.Context, k Keeper) sdk.Tags {
 		if err != nil {
 			panic(err) // TODO how should errors be handled here?
 		}
+	}
+
+	liveAuctions := k.GetLiveAuctions(ctx)
+	for _, auction := range liveAuctions {
+		auction.SetTimeRemaining(auction.GetEndTime() - ctx.BlockHeight())
+		fmt.Println("yo")
+		k.setAuction(ctx, auction, true)
 	}
 
 	return sdk.Tags{}

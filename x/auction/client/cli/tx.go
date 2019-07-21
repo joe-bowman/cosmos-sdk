@@ -15,9 +15,9 @@ import (
 // GetCmdPlaceBid cli command for creating and modifying cdps.
 func GetCmdPlaceBid(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:   "placebid [AuctionID] [Bidder] [Bid] [Lot]",
+		Use:   "placebid [AuctionID] [Bid] ",
 		Short: "place a bid on an auction",
-		Args:  cobra.ExactArgs(4),
+		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc).WithAccountDecoder(cdc)
 			txBldr := authtxb.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
@@ -30,18 +30,13 @@ func GetCmdPlaceBid(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			bid, err := sdk.ParseCoin(args[2])
+			bid, err := sdk.ParseCoin(args[1])
 			if err != nil {
-				fmt.Printf("invalid bid amount - %s \n", string(args[2]))
+				fmt.Printf("invalid bid amount - %s \n", string(args[1]))
 				return err
 			}
 
-			lot, err := sdk.ParseCoin(args[3])
-			if err != nil {
-				fmt.Printf("invalid lot - %s \n", string(args[3]))
-				return err
-			}
-			msg := auction.NewMsgPlaceBid(id, cliCtx.GetFromAddress(), bid, lot)
+			msg := auction.NewMsgPlaceBid(id, cliCtx.GetFromAddress(), bid)
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err

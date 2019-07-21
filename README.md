@@ -1,3 +1,5 @@
+## Chorus One (HackAtom Seoul 2019) - Auction Fee Model
+
 # Cosmos SDK
 ![banner](docs/cosmos-sdk-image.png)
 

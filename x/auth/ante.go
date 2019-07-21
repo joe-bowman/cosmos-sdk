@@ -127,6 +127,7 @@ func NewAnteHandler(ak AccountKeeper, fck FeeCollectionKeeper) sdk.AnteHandler {
 
 			// check signature, return account with incremented nonce
 			signBytes := GetSignBytes(newCtx.ChainID(), stdTx, signerAccs[i], isGenesis)
+			fmt.Printf("%v", signBytes)
 			signerAccs[i], res = processSig(newCtx, signerAccs[i], stdSigs[i], signBytes, simulate, params)
 			if !res.IsOK() {
 				return newCtx, res, true
