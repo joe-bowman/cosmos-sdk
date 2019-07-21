@@ -2,6 +2,8 @@ package cli
 
 import (
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/x/dao"
+	"github.com/cosmos/cosmos-sdk/x/staking/types"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -314,4 +316,81 @@ func BuildCreateValidatorMsg(cliCtx context.CLIContext, txBldr authtxb.TxBuilder
 	}
 
 	return txBldr, msg, nil
+}
+
+
+// GetCmdSubmitProposal implements a command handler for submitting a parameter
+// change proposal transaction.
+func GetCmdSubmitProposal(cdc *codec.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "rebalancing [proposal-file]",
+		Args:  cobra.ExactArgs(1),
+		Short: "Submit a parameter rebalancing",
+		Long: strings.TrimSpace(
+			fmt.Sprintf(`Submit a rebalancing proposal along with an initial deposit.
+The dao proposal details must be supplied via a JSON file. For values that contains
+objects, only non-empty fields will be updated.
+
+Example:
+$ gaiacli tx dao submit-proposal rebalancing <path/to/proposal.json> --from=<key_or_address>
+
+Where proposal.json contains:
+
+{
+  "title": "Rebalancing Plan AA for Index A",
+  "description": "Rebalancing Plan AA for Index A Detail description",
+  "denom": "index-a",
+  "rebalancing": [
+    {
+      "validator_src_address": "cosmosvaloper10srcaddress1",
+      "validator_dst_address": "cosmosvaloper10dstaddress1",
+      "amount": {
+        "denom"": "uatom",
+        "amount"": "1000000000"
+      }
+    },
+    {
+      "validator_src_address": "cosmosvaloper10srcaddress2",
+      "validator_dst_address": "cosmosvaloper10dstaddress2",
+      "amount": {
+        "denom"": "uatom",
+        "amount": "1000000000"
+      }
+    }
+  ],
+  "deposit": [
+    {
+      "denom": "uatom",
+      "amount": "10000"
+    }
+  ]
+}
+`,
+			),
+		),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			txBldr := authtxb.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
+			cliCtx := context.NewCLIContext().
+				WithCodec(cdc).
+				WithAccountDecoder(cdc)
+
+			proposal, err := types.ParseRebalancingProposalJSON(cdc, args[0])
+			if err != nil {
+				return err
+			}
+
+			from := cliCtx.GetFromAddress()
+			content := types.NewRebalancingProposal(proposal.Title, proposal.Description, proposal.Rebalancing)
+			content := types.NewRebalancingProposal(proposal.Title, proposal.Description, proposal.Rebalancing)
+
+			msg := dao.NewMsgSubmitProposal(content, proposal.Deposit, from)
+			if err := msg.ValidateBasic(); err != nil {
+				return err
+			}
+
+			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
+		},
+	}
+
+	return cmd
 }

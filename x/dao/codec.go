@@ -19,3 +19,15 @@ func RegisterCodec(cdc *codec.Codec) {
 func init() {
 	RegisterCodec(msgCdc)
 }
+
+// RegisterProposalTypeCodec registers an external proposal content type defined
+// in another module for the internal ModuleCdc. This allows the MsgSubmitProposal
+// to be correctly Amino encoded and decoded.
+func RegisterProposalTypeCodec(o interface{}, name string) {
+	msgCdc.RegisterConcrete(o, name, nil)
+}
+
+// TODO determine a good place to seal this codec
+func init() {
+	RegisterCodec(msgCdc)
+}

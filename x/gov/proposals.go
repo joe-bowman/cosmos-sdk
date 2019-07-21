@@ -48,7 +48,7 @@ func (p Proposal) String() string {
 // ProposalContent is an interface that has title, description, and proposaltype
 // that the governance module can use to identify them and generate human readable messages
 // ProposalContent can have additional fields, which will handled by ProposalHandlers
-// via type assertion, e.g. parameter change amount in ParameterChangeProposal
+// via type assertion, e.g. parameter change amount in RebalancingProposal
 type ProposalContent interface {
 	GetTitle() string
 	GetDescription() string

@@ -18,7 +18,7 @@ type Proposal struct {
 	ProposalID uint64 `json:"proposal_id"` //  ID of the proposal
 
 	Denom string `json:"denom"` // denom for DAO Proposal
-	TotalDaoStake		sdk.Coin  // for DAO voting, need to staking for prevent double voting
+	TotalDaoStake		sdk.Coin `json:"total_dao_stake"`  // for DAO voting, need to staking for prevent double voting
 
 	Status           ProposalStatus `json:"proposal_status"`    //  Status of the Proposal {Pending, Active, Passed, Rejected}
 	FinalTallyResult TallyResult    `json:"final_tally_result"` //  Result of Tallys
@@ -52,7 +52,7 @@ func (p Proposal) String() string {
 // ProposalContent is an interface that has title, description, and proposaltype
 // that the governance module can use to identify them and generate human readable messages
 // ProposalContent can have additional fields, which will handled by ProposalHandlers
-// via type assertion, e.g. parameter change amount in ParameterChangeProposal
+// via type assertion, e.g. parameter change amount in RebalancingProposal
 type ProposalContent interface {
 	GetTitle() string
 	GetDescription() string
@@ -71,6 +71,22 @@ func (p Proposals) String() string {
 			prop.ProposalType(), prop.GetTitle())
 	}
 	return strings.TrimSpace(out)
+}
+
+
+var validProposalTypes = map[string]struct{}{
+	ProposalTypeTextString:            {},
+	ProposalTypeSoftwareUpgradeString: {},
+}
+
+// RegisterProposalType registers a proposal type. It will panic if the type is
+// already registered.
+func RegisterProposalType(ty string) {
+	if _, ok := validProposalTypes[ty]; ok {
+		panic(fmt.Sprintf("already registered proposal type: %s", ty))
+	}
+
+	validProposalTypes[ty] = struct{}{}
 }
 
 // Text Proposals
@@ -136,6 +152,10 @@ const (
 	ProposalTypeNil             ProposalKind = 0x00
 	ProposalTypeText            ProposalKind = 0x01
 	ProposalTypeRebalancing 	ProposalKind = 0x02
+
+	// 0.36.0 version
+	ProposalTypeTextString            string = "Text"
+	ProposalTypeSoftwareUpgradeString string = "SoftwareUpgrade"
 )
 
 // String to proposalType byte. Returns 0xff if invalid.
