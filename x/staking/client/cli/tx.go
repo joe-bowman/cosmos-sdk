@@ -380,8 +380,7 @@ Where proposal.json contains:
 			}
 
 			from := cliCtx.GetFromAddress()
-			content := types.NewRebalancingProposal(proposal.Title, proposal.Description, proposal.Rebalancing)
-			content := types.NewRebalancingProposal(proposal.Title, proposal.Description, proposal.Rebalancing)
+			content := types.NewRebalancingProposal(proposal.Title, proposal.Description, proposal.Denomination, proposal.Portions)
 
 			msg := dao.NewMsgSubmitProposal(content, proposal.Deposit, from)
 			if err := msg.ValidateBasic(); err != nil {

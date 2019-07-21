@@ -296,6 +296,7 @@ func (msg MsgIndexRebalance) GetSignBytes() []byte {
 
 // quick validity check
 func (msg MsgIndexRebalance) ValidateBasic() sdk.Error {
+	// when dao, msg.DelegatorAddress can be Empty
 	if msg.DelegatorAddress.Empty() {
 		return ErrNilDelegatorAddr(DefaultCodespace)
 	}

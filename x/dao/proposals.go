@@ -3,7 +3,6 @@ package dao
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/x/staking"
 	"strings"
 	"time"
 
@@ -56,8 +55,13 @@ func (p Proposal) String() string {
 type ProposalContent interface {
 	GetTitle() string
 	GetDescription() string
+	ProposalRoute() string
 	ProposalType() ProposalKind
+	ValidateBasic() sdk.Error
+	String() string
 }
+
+type Handler func(ctx sdk.Context, content ProposalContent) sdk.Error
 
 // Proposals is an array of proposal
 type Proposals []Proposal
@@ -77,6 +81,7 @@ func (p Proposals) String() string {
 var validProposalTypes = map[string]struct{}{
 	ProposalTypeTextString:            {},
 	ProposalTypeSoftwareUpgradeString: {},
+	ProposalTypeRebalancingString: {},
 }
 
 // RegisterProposalType registers a proposal type. It will panic if the type is
@@ -103,40 +108,40 @@ func NewTextProposal(title, description string) TextProposal {
 }
 
 // Implements Proposal Interface
-var _ ProposalContent = TextProposal{}
+//var _ ProposalContent = TextProposal{}
+//
+//// nolint
+//func (tp TextProposal) GetTitle() string           { return tp.Title }
+//func (tp TextProposal) GetDescription() string     { return tp.Description }
+//func (tp TextProposal) ProposalType() ProposalKind { return ProposalTypeText }
+//
+//
+//// TODO: need to declare in staking module
+//type Rebalancing []staking.MsgBeginRedelegate // list of redelegation pairs
+//
+//// Rebalancing Proposals
+//type RebalancingProposal struct {
+//	Title       string `json:"title"`       //  Title of the proposal
+//	Description string `json:"description"` //  Description of the proposal
+//	Rebalancing Rebalancing `json:"rebalancing"` // list of redelegation pairs
+//}
+//
+//func NewRebalancingProposal(title, description string, rebalancing Rebalancing) RebalancingProposal {
+//	return RebalancingProposal{
+//		Title:       title,
+//		Description: description,
+//		Rebalancing: rebalancing,
+//	}
+//}
+//
+//// Implements Proposal Interface
+//var _ ProposalContent = RebalancingProposal{}
 
 // nolint
-func (tp TextProposal) GetTitle() string           { return tp.Title }
-func (tp TextProposal) GetDescription() string     { return tp.Description }
-func (tp TextProposal) ProposalType() ProposalKind { return ProposalTypeText }
-
-
-// TODO: need to declare in staking module
-type Rebalancing []staking.MsgBeginRedelegate // list of redelegation pairs
-
-// Rebalancing Proposals
-type RebalancingProposal struct {
-	Title       string `json:"title"`       //  Title of the proposal
-	Description string `json:"description"` //  Description of the proposal
-	Rebalancing Rebalancing `json:"rebalancing"` // list of redelegation pairs
-}
-
-func NewRebalancingProposal(title, description string, rebalancing Rebalancing) RebalancingProposal {
-	return RebalancingProposal{
-		Title:       title,
-		Description: description,
-		Rebalancing: rebalancing,
-	}
-}
-
-// Implements Proposal Interface
-var _ ProposalContent = RebalancingProposal{}
-
-// nolint
-func (rp RebalancingProposal) GetTitle() string           { return rp.Title }
-func (rp RebalancingProposal) GetDescription() string     { return rp.Description }
-func (rp RebalancingProposal) GetRebalancing() Rebalancing { return rp.Rebalancing }
-func (rp RebalancingProposal) ProposalType() ProposalKind { return ProposalTypeText }
+//func (rp RebalancingProposal) GetTitle() string           { return rp.Title }
+//func (rp RebalancingProposal) GetDescription() string     { return rp.Description }
+//func (rp RebalancingProposal) GetRebalancing() Rebalancing { return rp.Rebalancing }
+//func (rp RebalancingProposal) ProposalType() ProposalKind { return ProposalTypeText }
 
 
 // ProposalQueue
@@ -156,6 +161,7 @@ const (
 	// 0.36.0 version
 	ProposalTypeTextString            string = "Text"
 	ProposalTypeSoftwareUpgradeString string = "SoftwareUpgrade"
+	ProposalTypeRebalancingString string = "Rebalancing"
 )
 
 // String to proposalType byte. Returns 0xff if invalid.

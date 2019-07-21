@@ -32,11 +32,12 @@ func init() {
 type RebalancingProposal struct {
 	Title       string        `json:"title" yaml:"title"`
 	Description string        `json:"description" yaml:"description"`
-	Rebalancing Rebalancing `json:"rebalancing yaml:rebalancing` // list of redelegation pairs
+	Denomination string `json:"delegator_address"`
+	Portions []ValidatorPortion `json:"validator_portion"`
 }
 
-func NewRebalancingProposal(title, description string, Rebalancing Rebalancing) RebalancingProposal {
-	return RebalancingProposal{title, description, Rebalancing}
+func NewRebalancingProposal(title, description string, denom string, portions []ValidatorPortion) RebalancingProposal {
+	return RebalancingProposal{title, description, denom, portions}
 }
 
 // GetTitle returns the title of a parameter change proposal.
@@ -58,7 +59,20 @@ func (rp RebalancingProposal) ValidateBasic() sdk.Error {
 		return err
 	}
 
-	return ValidateChanges(rp.Rebalancing)
+	if len(rp.Denomination) == 0 {
+		return ErrBadDenom(DefaultCodespace)
+	}
+
+	for _, portion := range rp.Portions {
+		if portion.ValidatorAddress.Empty() {
+			return ErrNilValidatorAddr(DefaultCodespace)
+		}
+		if portion.Amount.Amount.LTE(sdk.ZeroInt()) {
+			return ErrBadDelegationAmount(DefaultCodespace)
+		}
+	}
+
+	return nil
 }
 
 // String implements the Stringer interface.
@@ -68,61 +82,62 @@ func (pcp RebalancingProposal) String() string {
 	b.WriteString(fmt.Sprintf(`Rebalancing DAO Proposal:
   Title:       %s
   Description: %s
-  Rebalancing:
-`, pcp.Title, pcp.Description))
+  Denomination: %s
+`, pcp.Title, pcp.Description, pcp.Denomination))
 
-	for _, rp := range pcp.Rebalancing {
-		b.WriteString(fmt.Sprintf(`    Rebalancing:
-      ValidatorSrcAddress: %s
-      ValidatorDstAddress:      %s
-      Amount:   %s
-`, rp.ValidatorSrcAddress, rp.ValidatorDstAddress, rp.Amount.String()))
+	for _, p := range pcp.Portions {
+		b.WriteString(fmt.Sprintf(`    Rebalancing Portions:
+      ValidatorAddress: %s
+      Amount:      %s
+`, p.ValidatorAddress.String(), p.Amount.String()))
 	}
 
 	return b.String()
 }
 
+
+
 // TODO: need DelegatorAddress?
-type RedelegationPair struct {
-	//DelegatorAddress    sdk.AccAddress `json:"delegator_address"`
-	ValidatorSrcAddress sdk.ValAddress `json:"validator_src_address"`
-	ValidatorDstAddress sdk.ValAddress `json:"validator_dst_address"`
-	Amount              sdk.Coin       `json:"amount"`
-}
+//type RedelegationPair struct {
+//	//DelegatorAddress    sdk.AccAddress `json:"delegator_address"`
+//	ValidatorSrcAddress sdk.ValAddress `json:"validator_src_address"`
+//	ValidatorDstAddress sdk.ValAddress `json:"validator_dst_address"`
+//	Amount              sdk.Coin       `json:"amount"`
+//}
 
-type Rebalancing []RedelegationPair // list of redelegation pairs
-
-// String implements the Stringer interface.
-func (rp RedelegationPair) String() string {
-	return fmt.Sprintf(`Param Change:
-  ValidatorSrcAddress: %s
-  ValidatorDstAddress: %s
-  Amount:   %s
-`, rp.ValidatorSrcAddress, rp.ValidatorDstAddress, rp.Amount.String())
-}
+//type Rebalancing []RedelegationPair // list of redelegation pairs
+//
+//// String implements the Stringer interface.
+//func (rp RedelegationPair) String() string {
+//	return fmt.Sprintf(`Param Change:
+//  ValidatorSrcAddress: %s
+//  ValidatorDstAddress: %s
+//  Amount:   %s
+//`, rp.ValidatorSrcAddress, rp.ValidatorDstAddress, rp.Amount.String())
+//}
 
 // ValidateChange performs basic validation checks over a set of ParamChange. It
 // returns an error if any ParamChange is invalid.
-func ValidateChanges(rebalancing Rebalancing) sdk.Error {
-	if len(rebalancing) == 0 {
-		return ErrNoRedelegation(DefaultCodespace)
-	}
-
-	for _, r := range rebalancing {
-		fmt.Println(r)
-		if len(r.ValidatorSrcAddress) == 0 {
-			return ErrBadRedelegationAddr(DefaultCodespace)
-		}
-		if len(r.ValidatorDstAddress) == 0 {
-			return ErrBadRedelegationDst(DefaultCodespace)
-		}
-		if r.Amount.IsZero() {
-			return ErrBadSharesAmount(DefaultCodespace)
-		}
-	}
-
-	return nil
-}
+//func ValidateChanges(rebalancing Rebalancing) sdk.Error {
+//	if len(rebalancing) == 0 {
+//		return ErrNoRedelegation(DefaultCodespace)
+//	}
+//
+//	for _, r := range rebalancing {
+//		fmt.Println(r)
+//		if len(r.ValidatorSrcAddress) == 0 {
+//			return ErrBadRedelegationAddr(DefaultCodespace)
+//		}
+//		if len(r.ValidatorDstAddress) == 0 {
+//			return ErrBadRedelegationDst(DefaultCodespace)
+//		}
+//		if r.Amount.IsZero() {
+//			return ErrBadSharesAmount(DefaultCodespace)
+//		}
+//	}
+//
+//	return nil
+//}
 
 
 // ParseParamChangeProposalJSON reads and parses a ParamChangeProposalJSON from
