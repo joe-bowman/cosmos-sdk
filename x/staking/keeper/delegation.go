@@ -462,6 +462,7 @@ func (k Keeper) NewIndex(
 	denomination string,
 	subtractAccount bool,
 ) (newShares sdk.Dec, err sdk.Error) {
+	fmt.Println("- Creating Index")
 	// We will delegate to each validator one by one, and track how much we
 	// delegate in total in this counter.
 	totalSubtracted := sdk.NewCoin(
@@ -473,18 +474,22 @@ func (k Keeper) NewIndex(
 	// index vouchers.
 	sharesList := make([]types.ValidatorPortion, 0)
 
+	fmt.Println("- Subtract Account")
 	if subtractAccount {
 		// For each portion, delegate and track total amount delegated.
 		for _, portion := range portions {
+			fmt.Println("- Fetch Validator")
 			validator, _ := k.GetValidator(ctx, portion.ValidatorAddress)
 			// In some situations, the exchange rate becomes invalid, e.g.
 			// if Validator loses all tokens due to slashing. In this case,
 			// make all future delegations invalid.
 			if validator.InvalidExRate() {
+				fmt.Println("Quitting For Invalid Ex")
 				return sdk.ZeroDec(), types.ErrDelegatorShareExRateInvalid(k.Codespace())
 			}
 
 			// Add Shares/Tokens to the Validator we're delegating too.
+			fmt.Println("- Modify Shares")
 			validator, newShares := k.AddValidatorTokensAndShares(ctx, validator, portion.Amount.Amount)
 			k.AfterDelegationModified(ctx, delAddr, validator.OperatorAddress)
 
@@ -514,11 +519,15 @@ func (k Keeper) NewIndex(
 		sdk.Coins{totalSubtracted},
 	)
 
+	fmt.Println("- Confirm Delegation")
 	if err != nil {
+		fmt.Println(err)
 		return sdk.Dec{}, err
 	}
 
 	// Mint Our Shares Coin (Index), and Add to the delegators wallet.
+	fmt.Println("Minting:", denomination)
+	fmt.Println(sharesList)
 	indexCoin := sdk.NewCoin(denomination, totalSubtracted.Amount)
 	_, _, err = k.bankKeeper.AddCoins(ctx, delAddr, sdk.Coins{indexCoin})
 	k.denominationBaskets[denomination] = sharesList

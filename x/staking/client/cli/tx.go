@@ -115,7 +115,7 @@ func GetCmdEditValidator(cdc *codec.Codec) *cobra.Command {
 }
 
 // GetCmdDelegate implements the delegate command.
-func GetCmdDelegate(cdc *codec.Codec) *cobra.Command {
+func GetCmdIndexDelegate(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use:   "delegate [validator-addr] [amount]",
 		Args:  cobra.ExactArgs(2),
@@ -148,10 +148,10 @@ $ gaiacli tx staking delegate cosmosvaloper1l2rsakp388kuv9k8qzq6lrm9taddae7fpx59
 }
 
 // GetCmdDelegate implements the delegate command.
-func GetCmdIndexDelegate(cdc *codec.Codec) *cobra.Command {
+func GetCmdDelegate(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:   "delegate [validator-addr] [amount]",
-		Args:  cobra.ExactArgs(2),
+		Use:   "index_delegate [validator-addr] [amount]",
+		Args:  cobra.MinimumNArgs(3),
 		Short: "delegate liquid tokens to a validator",
 		Long: strings.TrimSpace(`Delegate an amount of liquid coins to a validator from your wallet:
 
@@ -163,23 +163,37 @@ $ gaiacli tx staking delegate cosmosvaloper1l2rsakp388kuv9k8qzq6lrm9taddae7fpx59
 				WithCodec(cdc).
 				WithAccountDecoder(cdc)
 
-			amount, err := sdk.ParseCoin(args[1])
-			if err != nil {
-				return err
+			skip := 1
+			fmt.Println("HERE WE GO")
+			fmt.Println("HERE WE GO")
+			fmt.Println("HERE WE GO")
+			fmt.Println("HERE WE GO")
+			fmt.Println("HERE WE GO")
+			fmt.Println("HERE WE GO")
+			pairs := make([]staking.ValidatorPortion, 0)
+			for skip < len(args) {
+				amount, err := sdk.ParseCoin(args[skip+1])
+				if err != nil {
+					return err
+				}
+				valAddr, err := sdk.ValAddressFromBech32(args[skip])
+				if err != nil {
+					return err
+				}
+
+				skip = skip + 2
+				pairs = append(pairs, staking.ValidatorPortion{valAddr, amount})
+				fmt.Println("Val: ", valAddr)
+				fmt.Println("Amt: ", amount)
+				fmt.Println("")
 			}
 
 			delAddr := cliCtx.GetFromAddress()
-			valAddr, err := sdk.ValAddressFromBech32(args[0])
-			if err != nil {
-				return err
-			}
 
 			msg := staking.MsgIndexDelegate{
-				Denomination:     "",
+				Denomination:     args[0],
 				DelegatorAddress: delAddr,
-				Portions: []staking.ValidatorPortion{
-					staking.ValidatorPortion{valAddr, amount},
-				},
+				Portions:         pairs,
 			}
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg}, false)
 		},
