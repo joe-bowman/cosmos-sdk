@@ -1,3 +1,13 @@
+## Chorus One (HackAtom Seoul 2019) - Auction Fee Model
+
+Welcome to the branch of gaia 0.35 for Chorus One entry in Seoul Cosmos HackAtom 2019.
+
+Use in conjunction with https://github.com/joe-bowman/dashboard.git
+
+
+Enjoy :)
+
+
 # Cosmos SDK
 ![banner](docs/cosmos-sdk-image.png)
 

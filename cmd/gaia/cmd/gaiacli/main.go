@@ -24,6 +24,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
 
+	auct "github.com/cosmos/cosmos-sdk/x/auction"
+	auction "github.com/cosmos/cosmos-sdk/x/auction/client/rest"
 	at "github.com/cosmos/cosmos-sdk/x/auth"
 	auth "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
 	bank "github.com/cosmos/cosmos-sdk/x/bank/client/rest"
@@ -36,6 +38,7 @@ import (
 	st "github.com/cosmos/cosmos-sdk/x/staking"
 	staking "github.com/cosmos/cosmos-sdk/x/staking/client/rest"
 
+	auctionclient "github.com/cosmos/cosmos-sdk/x/auction/client"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	crisisclient "github.com/cosmos/cosmos-sdk/x/crisis/client"
@@ -76,6 +79,7 @@ func main() {
 		mintclient.NewModuleClient(mint.StoreKey, cdc),
 		slashingclient.NewModuleClient(sl.StoreKey, cdc),
 		crisisclient.NewModuleClient(sl.StoreKey, cdc),
+		auctionclient.NewModuleClient(auct.StoreKey, cdc),
 	}
 
 	rootCmd := &cobra.Command{
@@ -177,6 +181,7 @@ func registerRoutes(rs *lcd.RestServer) {
 	slashing.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc, rs.KeyBase)
 	gov.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc)
 	mintrest.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc)
+	auction.RegisterRoutes(rs.CliCtx, rs.Mux, rs.Cdc)
 }
 
 func registerSwaggerUI(rs *lcd.RestServer) {

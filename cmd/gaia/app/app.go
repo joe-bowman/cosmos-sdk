@@ -14,6 +14,7 @@ import (
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auction"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
@@ -57,8 +58,10 @@ type GaiaApp struct {
 	keyFeeCollection *sdk.KVStoreKey
 	keyParams        *sdk.KVStoreKey
 	tkeyParams       *sdk.TransientStoreKey
+	keyAuction       *sdk.KVStoreKey
 
 	// Manage getting and setting accounts
+	auctionKeeper       auction.Keeper
 	accountKeeper       auth.AccountKeeper
 	feeCollectionKeeper auth.FeeCollectionKeeper
 	bankKeeper          bank.Keeper
@@ -97,6 +100,7 @@ func NewGaiaApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest b
 		keyFeeCollection: sdk.NewKVStoreKey(auth.FeeStoreKey),
 		keyParams:        sdk.NewKVStoreKey(params.StoreKey),
 		tkeyParams:       sdk.NewTransientStoreKey(params.TStoreKey),
+		keyAuction:       sdk.NewKVStoreKey(auction.StoreKey),
 	}
 
 	app.paramsKeeper = params.NewKeeper(app.cdc, app.keyParams, app.tkeyParams)
@@ -162,6 +166,13 @@ func NewGaiaApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest b
 		NewStakingHooks(app.distrKeeper.Hooks(), app.slashingKeeper.Hooks()),
 	)
 
+	app.auctionKeeper = auction.NewKeeper(
+		app.cdc,
+		app.bankKeeper,
+		app.stakingKeeper,
+		app.paramsKeeper,
+		app.keyAuction)
+
 	// register the crisis routes
 	bank.RegisterInvariants(&app.crisisKeeper, app.accountKeeper)
 	distr.RegisterInvariants(&app.crisisKeeper, app.distrKeeper, app.stakingKeeper)
@@ -174,7 +185,8 @@ func NewGaiaApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest b
 		AddRoute(distr.RouterKey, distr.NewHandler(app.distrKeeper)).
 		AddRoute(slashing.RouterKey, slashing.NewHandler(app.slashingKeeper)).
 		AddRoute(gov.RouterKey, gov.NewHandler(app.govKeeper)).
-		AddRoute(crisis.RouterKey, crisis.NewHandler(app.crisisKeeper))
+		AddRoute(crisis.RouterKey, crisis.NewHandler(app.crisisKeeper)).
+		AddRoute(auction.RouterKey, auction.NewHandler(app.auctionKeeper))
 
 	app.QueryRouter().
 		AddRoute(auth.QuerierRoute, auth.NewQuerier(app.accountKeeper)).
@@ -182,12 +194,13 @@ func NewGaiaApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest b
 		AddRoute(gov.QuerierRoute, gov.NewQuerier(app.govKeeper)).
 		AddRoute(slashing.QuerierRoute, slashing.NewQuerier(app.slashingKeeper, app.cdc)).
 		AddRoute(staking.QuerierRoute, staking.NewQuerier(app.stakingKeeper, app.cdc)).
-		AddRoute(mint.QuerierRoute, mint.NewQuerier(app.mintKeeper))
+		AddRoute(mint.QuerierRoute, mint.NewQuerier(app.mintKeeper)).
+		AddRoute(auction.QuerierRoute, auction.NewQuerier(app.auctionKeeper))
 
 	// initialize BaseApp
 	app.MountStores(app.keyMain, app.keyAccount, app.keyStaking, app.keyMint, app.keyDistr,
 		app.keySlashing, app.keyGov, app.keyFeeCollection, app.keyParams,
-		app.tkeyParams, app.tkeyStaking, app.tkeyDistr,
+		app.tkeyParams, app.tkeyStaking, app.tkeyDistr, app.keyAuction,
 	)
 	app.SetInitChainer(app.initChainer)
 	app.SetBeginBlocker(app.BeginBlocker)
@@ -214,8 +227,10 @@ func MakeCodec() *codec.Codec {
 	gov.RegisterCodec(cdc)
 	auth.RegisterCodec(cdc)
 	crisis.RegisterCodec(cdc)
+	auction.RegisterCodec(cdc)
 	sdk.RegisterCodec(cdc)
 	codec.RegisterCrypto(cdc)
+
 	return cdc
 }
 
@@ -244,6 +259,7 @@ func (app *GaiaApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) ab
 func (app *GaiaApp) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
 	tags := gov.EndBlocker(ctx, app.govKeeper)
 	validatorUpdates, endBlockerTags := staking.EndBlocker(ctx, app.stakingKeeper)
+	auction.EndBlocker(ctx, app.auctionKeeper)
 	tags = append(tags, endBlockerTags...)
 
 	if app.invCheckPeriod != 0 && ctx.BlockHeight()%int64(app.invCheckPeriod) == 0 {
@@ -283,6 +299,7 @@ func (app *GaiaApp) initFromGenesisState(ctx sdk.Context, genesisState GenesisSt
 	gov.InitGenesis(ctx, app.govKeeper, genesisState.GovData)
 	crisis.InitGenesis(ctx, app.crisisKeeper, genesisState.CrisisData)
 	mint.InitGenesis(ctx, app.mintKeeper, genesisState.MintData)
+	//auction.InitGenesis(ctx, app.auctionKeeper, genesisState.AuctionData) // TODO
 
 	// validate genesis state
 	if err := GaiaValidateGenesisState(genesisState); err != nil {

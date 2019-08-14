@@ -120,6 +120,14 @@ func (k Keeper) SetNewValidatorByPowerIndex(ctx sdk.Context, validator types.Val
 	store.Set(GetValidatorsByPowerIndexKey(validator), validator.OperatorAddress)
 }
 
+func (k Keeper) AddFeesToAuctionPool(ctx sdk.Context, validator types.Validator, coins sdk.DecCoins) types.Validator {
+	validator = validator.AddCoinsToFeePool(coins)
+	k.SetValidator(ctx, validator)
+	return validator
+}
+
+// add SettleFeePool and ReturnCoinsToFeePool here???
+
 // Update the tokens of an existing validator, update the validators power index key
 func (k Keeper) AddValidatorTokensAndShares(ctx sdk.Context, validator types.Validator,
 	tokensToAdd sdk.Int) (valOut types.Validator, addedShares sdk.Dec) {
@@ -456,5 +464,43 @@ func (k Keeper) UnbondAllMatureValidatorQueue(ctx sdk.Context) {
 			}
 		}
 		store.Delete(validatorTimesliceIterator.Key())
+	}
+}
+
+func (k Keeper) CollectFeePoolsForAuction(ctx sdk.Context) sdk.Coins {
+	allCoins := sdk.NewCoins()
+	params := k.GetParams(ctx)
+	validatorset := k.GetValidators(ctx, params.MaxValidators)
+	for _, validator := range validatorset {
+		intCoins, decCoins := sdk.DecCoins(validator.FeePool).TruncateDecimal()
+		//fmt.Printf("INT: %v, DEC: %v\n", intCoins, decCoins)
+		validator.LastFeePool = intCoins
+		validator.FeePool = decCoins
+		k.SetValidator(ctx, validator)
+		allCoins = allCoins.Add(validator.LastFeePool)
+	}
+	return allCoins
+}
+
+func (k Keeper) RollOverFeesFromAuction(ctx sdk.Context, coin sdk.Coin) {
+	params := k.GetParams(ctx)
+	validatorset := k.GetValidators(ctx, params.MaxValidators)
+	for _, validator := range validatorset {
+		lastFeePoolCoin := sdk.Coins{{coin.Denom, validator.LastFeePool.AmountOf(coin.Denom)}}
+		validator.LastFeePool = validator.LastFeePool.Sub(lastFeePoolCoin)
+		validator.FeePool = validator.FeePool.Add(sdk.NewDecCoins(lastFeePoolCoin))
+		k.SetValidator(ctx, validator)
+	}
+}
+
+func (k Keeper) RepatriateFeeEarnings(ctx sdk.Context, origCoin sdk.Coin, payCoin sdk.Coin) {
+	params := k.GetParams(ctx)
+	validatorset := k.GetValidators(ctx, params.MaxValidators)
+	for _, validator := range validatorset {
+		ratio := validator.LastFeePool.AmountOf(origCoin.Denom).Quo(origCoin.Amount)
+		tokens := ratio.Mul(payCoin.Amount)
+		validator.LastFeePool = validator.LastFeePool.Sub(sdk.Coins{{origCoin.Denom, validator.LastFeePool.AmountOf(origCoin.Denom)}})
+		validator.Tokens = validator.Tokens.Add(tokens)
+		k.SetValidator(ctx, validator)
 	}
 }
