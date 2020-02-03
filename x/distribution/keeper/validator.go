@@ -25,7 +25,7 @@ func (k Keeper) initializeValidator(ctx sdk.Context, val exported.ValidatorI) {
 }
 
 func (k Keeper) IncrementValidatorPeriod(ctx sdk.Context, val exported.ValidatorI) uint64 {
-	return k.IncrementValidatorPeriod(ctx, val)
+	return k.incrementValidatorPeriod(ctx, val)
 }
 
 // increment validator period, returning the period just ended
