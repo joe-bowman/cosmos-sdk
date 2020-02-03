@@ -732,7 +732,7 @@ func (app *BaseApp) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliv
 	ctx := app.getContextForTx(runTxModeDeliver, req.Tx)
 
 	sdktx, _ := tx.(auth.StdTx)
-	jsonTags, _ := codec.Cdc.MarshalJSON(sdk.StringifyEvents(result.Events.ToABCIEvents()))
+	jsonTags, _ := codec.Cdc.MarshalJSON(sdk.EventsToString(result.Events.ToABCIEvents()))
 	jsonMsgs := MsgsToString(sdktx.GetMsgs())
 	jsonFee, _ := codec.Cdc.MarshalJSON(sdktx.Fee)
 
