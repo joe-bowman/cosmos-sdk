@@ -1,6 +1,7 @@
 package baseapp
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -22,6 +23,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 )
 
 // Key to store the consensus params in the main store.
@@ -715,8 +717,9 @@ func (app *BaseApp) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliv
 	} else {
 		result = app.runTx(runTxModeDeliver, req.Tx, tx)
 	}
+	txHash := fmt.Sprintf("%X", tmhash.Sum(req.Tx))
 
-	return abci.ResponseDeliverTx{
+	response := abci.ResponseDeliverTx{
 		Code:      uint32(result.Code),
 		Codespace: string(result.Codespace),
 		Data:      result.Data,
@@ -725,6 +728,60 @@ func (app *BaseApp) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliv
 		GasUsed:   int64(result.GasUsed),   // TODO: Should type accept unsigned ints?
 		Events:    result.Events.ToABCIEvents(),
 	}
+
+	ctx := app.getContextForTx(runTxModeDeliver, req.Tx)
+
+	sdktx, _ := tx.(auth.StdTx)
+	jsonTags, _ := codec.Cdc.MarshalJSON(sdk.StringifyEvents(result.Events.ToABCIEvents()))
+	jsonMsgs := MsgsToString(sdktx.GetMsgs())
+	jsonFee, _ := codec.Cdc.MarshalJSON(sdktx.Fee)
+
+	for idx, msg := range sdktx.GetMsgs() {
+		f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/messages.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+		msgString, _ := codec.Cdc.MarshalJSON(msg)
+		f.WriteString(fmt.Sprintf("%s,%d,%s,\"%s\",%s,%s\n",
+			txHash,
+			idx,
+			msg.Type(),
+			strings.ReplaceAll(string(msgString), "\"", "\"\""),
+			ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"),
+			ctx.ChainID()))
+		f.Close()
+		extractAddresses(msg, string(txHash), ctx.BlockHeight(), idx, ctx.ChainID())
+	}
+
+	f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/txs.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	f.WriteString(fmt.Sprintf("%s,%d,%d,%d,%d,\"%s\",%s,\"%s\",\"%s\",\"%s\",%s,%s\n",
+		txHash,
+		ctx.BlockHeight(),
+		uint32(result.Code),
+		int64(result.GasWanted),
+		int64(result.GasUsed),
+		strings.ReplaceAll(result.Log, "\"", "\"\""),
+		sdktx.GetMemo(),
+		strings.ReplaceAll(string(jsonFee), "\"", "\"\""),
+		strings.ReplaceAll(string(jsonTags), "\"", "\"\""),
+		strings.ReplaceAll(string(jsonMsgs), "\"", "\"\""),
+		ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"),
+		ctx.ChainID()))
+	f.Close()
+
+	return response
+}
+
+func extractAddresses(msg sdk.Msg, hash string, height int64, idx int, chainid string) {
+	m := BasicMsgStruct{}
+	_ = json.Unmarshal(msg.GetSignBytes(), &m)
+	ref := reflect.ValueOf(&m.Value).Elem()
+	f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/addresses.%d.%s", height, chainid), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	for i := 0; i < ref.NumField(); i++ {
+		addr := ref.Field(i).Interface()
+		sdkAddr, ok := addr.(sdk.Address) // cast to address interface so we have access to the String() method, which bech32ifies the address
+		if ok && !sdkAddr.Empty() {
+			f.WriteString(fmt.Sprintf("%s,%d,%s,%s\n", hash, idx, sdkAddr.String(), chainid))
+		}
+	}
+	f.Close()
 }
 
 // validateBasicTxMsgs executes basic validator calls for messages.
@@ -1070,4 +1127,31 @@ func (st *state) CacheMultiStore() sdk.CacheMultiStore {
 
 func (st *state) Context() sdk.Context {
 	return st.ctx
+}
+
+type (
+	// AddressContainingStruct exists to parse JSON blobs containing sdk.Addressbased fields.
+	AddressContainingStruct struct {
+		From         sdk.AccAddress `json:"from_address"`
+		To           sdk.AccAddress `json:"to_address"`
+		Validator    sdk.ValAddress `json:"validator_address"`
+		Delegator    sdk.AccAddress `json:"delegator_address"`
+		SrcValidator sdk.ValAddress `json:"src_validator_address"`
+		DstValidator sdk.ValAddress `json:"dst_validator_address"`
+		Proposer     sdk.AccAddress `json:"proposer"`
+	}
+
+	// BasicMsgStruct is a simplified reprentation of an sdk.Msg
+	BasicMsgStruct struct {
+		Type  string                  `json:"type"`
+		Value AddressContainingStruct `json:"value"`
+	}
+)
+
+func MsgsToString(msgs []sdk.Msg) string {
+	outStrings := []string{}
+	for _, msg := range msgs {
+		outStrings = append(outStrings, string(msg.GetSignBytes()))
+	}
+	return fmt.Sprintf("[%s]", strings.Join(outStrings, ","))
 }
