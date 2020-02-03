@@ -217,3 +217,17 @@ func StringifyEvents(events []abci.Event) StringEvents {
 
 	return res.Flatten()
 }
+
+func EventsToString(events []abci.Event) []Attribute {
+	var res []Attribute
+
+	for _, e := range events {
+		for _, attr := range e.Attributes {
+			res = append(
+				res,
+				Attribute{string(attr.Key), string(attr.Value)},
+			)
+		}
+	}
+	return res
+}
