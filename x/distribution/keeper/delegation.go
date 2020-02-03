@@ -53,6 +53,10 @@ func (k Keeper) calculateDelegationRewardsBetween(ctx sdk.Context, val exported.
 	return
 }
 
+func (k Keeper) CalculateDelegationRewards(ctx sdk.Context, val exported.ValidatorI, del exported.DelegationI, endingPeriod uint64) (rewards sdk.DecCoins) {
+	return k.calculateDelegationRewards(ctx, val, del, endingPeriod)
+}
+
 // calculate the total rewards accrued by a delegation
 func (k Keeper) calculateDelegationRewards(ctx sdk.Context, val exported.ValidatorI, del exported.DelegationI, endingPeriod uint64) (rewards sdk.DecCoins) {
 	// fetch starting info for delegation

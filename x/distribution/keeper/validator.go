@@ -24,7 +24,12 @@ func (k Keeper) initializeValidator(ctx sdk.Context, val exported.ValidatorI) {
 	k.SetValidatorOutstandingRewards(ctx, val.GetOperator(), sdk.DecCoins{})
 }
 
+func (k Keeper) IncrementValidatorPeriod(ctx sdk.Context, val exported.ValidatorI) uint64 {
+	return k.IncrementValidatorPeriod(ctx, val)
+}
+
 // increment validator period, returning the period just ended
+
 func (k Keeper) incrementValidatorPeriod(ctx sdk.Context, val exported.ValidatorI) uint64 {
 	// fetch current rewards
 	rewards := k.GetValidatorCurrentRewards(ctx, val.GetOperator())
