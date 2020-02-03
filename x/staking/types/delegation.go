@@ -469,3 +469,7 @@ func (r RedelegationResponses) String() (out string) {
 	}
 	return strings.TrimSpace(out)
 }
+
+func (u UnbondingDelegation) GetEntries() []UnbondingDelegationEntry {
+	return u.Entries
+}

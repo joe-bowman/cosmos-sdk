@@ -119,6 +119,15 @@ func (k Keeper) Slash(ctx sdk.Context, consAddr sdk.ConsAddress, infractionHeigh
 	// Burn the slashed tokens from the pool account and decrease the total supply.
 	validator = k.RemoveValidatorTokens(ctx, validator, tokensToBurn)
 
+	// we want to export all delegations for every user who was slashed.
+	affectedDelegators := make(map[string]sdk.AccAddress)
+	for _, delegation := range k.GetValidatorDelegations(ctx, validator.GetOperator()) {
+		affectedDelegators[delegation.GetDelegatorAddr().String()] = delegation.GetDelegatorAddr()
+	}
+	for _, delegator := range affectedDelegators {
+		k.ExportDelegationsForAccount(ctx, delegator)
+	}
+
 	switch validator.GetStatus() {
 	case sdk.Bonded:
 		if err := k.burnBondedTokens(ctx, tokensToBurn); err != nil {
