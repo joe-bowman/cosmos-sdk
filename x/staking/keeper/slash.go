@@ -122,7 +122,7 @@ func (k Keeper) Slash(ctx sdk.Context, consAddr sdk.ConsAddress, infractionHeigh
 	// we want to export all delegations for every user who was slashed.
 	affectedDelegators := make(map[string]sdk.AccAddress)
 	noGasCtx, _ := ctx.CacheContext()
-	noGasCtx.WithGasMeter(sdk.NewInfiniteGasMeter()).WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	noGasCtx := noGasCtx.WithGasMeter(sdk.NewInfiniteGasMeter()).WithBlockGasMeter(sdk.NewInfiniteGasMeter())
 	for _, delegation := range k.GetValidatorDelegations(noGasCtx, validator.GetOperator()) {
 		affectedDelegators[delegation.GetDelegatorAddr().String()] = delegation.GetDelegatorAddr()
 	}

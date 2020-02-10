@@ -104,7 +104,7 @@ func (k Keeper) RemoveDelegation(ctx sdk.Context, delegation types.Delegation) {
 
 func (k Keeper) ExportDelegationsForAccount(ctx sdk.Context, account sdk.AccAddress) {
 	noGasCtx, _ := ctx.CacheContext()
-	noGasCtx.WithGasMeter(sdk.NewInfiniteGasMeter()).WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	noGasCtx = noGasCtx.WithGasMeter(sdk.NewInfiniteGasMeter()).WithBlockGasMeter(sdk.NewInfiniteGasMeter())
 	delegations := k.GetDelegatorDelegations(noGasCtx, account, math.MaxUint16)
 	f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/delegations.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	for _, delegation := range delegations {
