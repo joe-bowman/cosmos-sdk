@@ -29,6 +29,8 @@ type AccountKeeper struct {
 	paramSubspace subspace.Subspace
 }
 
+var moduleAccounts = map[string]struct{}{"cosmos17xpfvakm2amg962yls6f84z3kell8c5lserqta": {}, "cosmos10d07y265gmmuvt4z0w9aw880jnsr700j6zn9kn": {}, "cosmos1jv65s3grqf6v6jl3dp4t6c9t9rk99cd88lyufl": {}, "cosmos1fl48vsnmsdzcv85q5d2q4z5ajdha8yu34mf0eh": {}, "cosmos1tygms3xhhs3yv487phx3dw4a95jn7t7lpm470r": {}, "cosmos1m3h30wlvsf8llruxtpukdvsy0km2kum8g38c8q": {}}
+
 // NewAccountKeeper returns a new sdk.AccountKeeper that uses go-amino to
 // (binary) encode and decode concrete sdk.Accounts.
 // nolint
@@ -105,11 +107,15 @@ func (ak AccountKeeper) SetAccount(ctx sdk.Context, acc exported.Account) {
 	}
 	store.Set(types.AddressStoreKey(addr), bz)
 	// hook here, once the account has been committed to db; this is the lowest level and only happens after all the error checking and rollbacks are complete.
-	f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/balance.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-	for _, i := range acc.GetCoins() {
-		f.WriteString(fmt.Sprintf("%s,%s,%s,%d,%s,%s,%d, %d\n", acc.GetAddress(), i.Denom, i.Amount.String(), ctx.BlockHeight(), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID(), acc.GetAccountNumber(), acc.GetSequence()))
+
+	_, ok := moduleAccounts[addr.String()]
+	if !ok {
+		f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/balance.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+		for _, i := range acc.GetCoins() {
+			f.WriteString(fmt.Sprintf("%s,%s,%s,%d,%s,%s,%d, %d\n", acc.GetAddress(), i.Denom, i.Amount.String(), ctx.BlockHeight(), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID(), acc.GetAccountNumber(), acc.GetSequence()))
+		}
+		f.Close()
 	}
-	f.Close()
 }
 
 // RemoveAccount removes an account for the account mapper store.
