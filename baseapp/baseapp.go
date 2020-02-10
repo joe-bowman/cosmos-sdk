@@ -735,6 +735,7 @@ func (app *BaseApp) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliv
 	jsonTags, _ := codec.Cdc.MarshalJSON(sdk.EventsToString(result.Events.ToABCIEvents()))
 	jsonMsgs := MsgsToString(sdktx.GetMsgs())
 	jsonFee, _ := codec.Cdc.MarshalJSON(sdktx.Fee)
+	jsonMemo, _ := codec.Cdc.MarshalJSON(sdktx.GetMemo())
 
 	for idx, msg := range sdktx.GetMsgs() {
 		f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/messages.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
@@ -758,7 +759,7 @@ func (app *BaseApp) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliv
 		int64(result.GasWanted),
 		int64(result.GasUsed),
 		strings.ReplaceAll(result.Log, "\"", "\"\""),
-		sdktx.GetMemo(),
+		strings.ReplaceAll(string(jsonMemo), "\"", "\"\""),
 		strings.ReplaceAll(string(jsonFee), "\"", "\"\""),
 		strings.ReplaceAll(string(jsonTags), "\"", "\"\""),
 		strings.ReplaceAll(string(jsonMsgs), "\"", "\"\""),
