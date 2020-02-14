@@ -753,7 +753,7 @@ func (app *BaseApp) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliv
 	}
 
 	f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/txs.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-	f.WriteString(fmt.Sprintf("%s,%d,%d,%d,%d,\"%s\",%s,\"%s\",\"%s\",\"%s\",%s,%s\n",
+	f.WriteString(fmt.Sprintf("%s,%d,%d,%d,%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%s,%s\n",
 		txHash,
 		ctx.BlockHeight(),
 		uint32(result.Code),
