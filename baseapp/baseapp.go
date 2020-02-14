@@ -24,6 +24,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/auth/types"
 )
 
 // Key to store the consensus params in the main store.
@@ -770,19 +771,30 @@ func (app *BaseApp) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliv
 	return response
 }
 
-func extractAddresses(msg sdk.Msg, hash string, height int64, idx int, chainid string) {
+func getAddresses(msg sdk.Msg) []sdk.Address {
+	var addrs []sdk.Address
 	m := BasicMsgStruct{}
 	_ = json.Unmarshal(msg.GetSignBytes(), &m)
 	ref := reflect.ValueOf(&m.Value).Elem()
-	f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/addresses.%d.%s", height, chainid), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	for i := 0; i < ref.NumField(); i++ {
 		addr := ref.Field(i).Interface()
 		sdkAddr, ok := addr.(sdk.Address) // cast to address interface so we have access to the String() method, which bech32ifies the address
 		if ok && !sdkAddr.Empty() {
-			f.WriteString(fmt.Sprintf("%s,%d,%s,%s\n", hash, idx, sdkAddr.String(), chainid))
+			addrs = append(addrs, sdkAddr)
 		}
 	}
-	f.Close()
+	return addrs
+}
+
+func extractAddresses(msg sdk.Msg, hash string, height int64, idx int, chainid string) {
+	addrs := getAddresses(msg)
+	if len(addrs) != 0 {
+		f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/addresses.%d.%s", height, chainid), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+		for _, addr := range addrs {
+			f.WriteString(fmt.Sprintf("%s,%d,%s,%s\n", hash, idx, addr.String(), chainid))
+		}
+		f.Close()
+	}
 }
 
 // validateBasicTxMsgs executes basic validator calls for messages.
@@ -937,6 +949,8 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 
 	defer func() {
 		if r := recover(); r != nil {
+			txRollback(app, ctx.WithMultiStore(ms), tx.GetMsgs())
+
 			switch rType := r.(type) {
 			case sdk.ErrorOutOfGas:
 				log := fmt.Sprintf(
@@ -974,6 +988,7 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 
 	var msgs = tx.GetMsgs()
 	if err := validateBasicTxMsgs(msgs); err != nil {
+		txRollback(app, ctx.WithMultiStore(ms), msgs)
 		return err.Result()
 	}
 
@@ -1005,6 +1020,7 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 		gasWanted = result.GasWanted
 
 		if abort {
+			txRollback(app, ctx.WithMultiStore(ms), msgs)
 			return result
 		}
 
@@ -1025,9 +1041,78 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 	// only update state if all messages pass
 	if result.IsOK() {
 		msCache.Write()
+	} else {
+		txRollback(app, ctx.WithMultiStore(ms), msgs)
 	}
 
 	return result
+}
+
+func txRollback(app *BaseApp, ctx sdk.Context, msgs []sdk.Msg) {
+	var querier types.NodeQuerier
+	querier = AppQuerier{app, ctx}
+
+	fmt.Printf("Rolling back transaction (%d messages)\n", len(msgs))
+	var addrs []sdk.AccAddress
+	for _, msg := range msgs {
+		fmt.Printf("%+v\n", msg)
+		for _, addr := range getAddresses(msg) {
+			accAddr, ok := addr.(sdk.AccAddress)
+			if ok {
+				addrs = append(addrs, accAddr)
+			}
+		}
+	}
+
+	fmt.Printf("%v", addrs)
+
+	for _, addr := range addrs {
+		nq, ok := querier.(types.NodeQuerier)
+		if !ok {
+			panic("Unable to assert querier")
+		}
+
+		ar := types.NewAccountRetriever(nq)
+
+		acc, err := ar.GetAccount(addr)
+		if err != nil {
+			panic(err)
+		}
+
+		f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/balance.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+		for _, i := range acc.GetCoins() {
+			f.WriteString(fmt.Sprintf("%s,%s,%s,%d,%s,%s,%d, %d\n", acc.GetAddress(), i.Denom, i.Amount.String(), ctx.BlockHeight(), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID(), acc.GetAccountNumber(), acc.GetSequence()))
+		}
+		f.Close()
+
+	}
+}
+
+type AppQuerier struct {
+	app *BaseApp
+	ctx sdk.Context
+}
+
+func (a AppQuerier) QueryWithData(path string, data []byte) ([]byte, int64, error) {
+	noGasCtx, _ := a.ctx.CacheContext()
+	noGasCtx = noGasCtx.WithGasMeter(sdk.NewInfiniteGasMeter()).WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	req := abci.RequestQuery{
+		Path:   path,
+		Data:   data,
+		Height: 0,
+		Prove:  false,
+	}
+	sPath := splitPath(req.Path)
+	querier := a.app.queryRouter.Route(sPath[1])
+	res, err := querier(noGasCtx, sPath[2:], req)
+	if err != nil {
+		return []byte{}, 0, err
+	}
+	return res, a.ctx.BlockHeight(), nil
+}
+
+type QueryBalanceParams struct {
+	Address sdk.AccAddress
 }
 
 // EndBlock implements the ABCI interface.
