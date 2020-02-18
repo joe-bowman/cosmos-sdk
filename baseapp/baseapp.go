@@ -25,6 +25,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
+	staking "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
 // Key to store the consensus params in the main store.
@@ -1055,16 +1056,84 @@ func txRollback(app *BaseApp, ctx sdk.Context, msgs []sdk.Msg) {
 	fmt.Printf("Rolling back transaction (%d messages)\n", len(msgs))
 	var addrs []sdk.AccAddress
 	for _, msg := range msgs {
-		fmt.Printf("%+v\n", msg)
+		var accAddr sdk.AccAddress
+		var ok bool
 		for _, addr := range getAddresses(msg) {
-			accAddr, ok := addr.(sdk.AccAddress)
+			accAddr, ok = addr.(sdk.AccAddress)
 			if ok {
 				addrs = append(addrs, accAddr)
 			}
 		}
+		fmt.Println(msg.Type())
+		switch msg.Type() {
+		case "delegate", "begin_redelegate":
+			params := staking.QueryDelegatorParams{accAddr}
+			data, err := codec.Cdc.MarshalJSON(params)
+			if err != nil {
+				fmt.Println(err)
+			}
+			delegateResponses, _, err := querier.QueryWithData("custom/staking/delegatorDelegations", data)
+			if err != nil {
+				fmt.Println(err)
+			}
+			var delegations []staking.DelegationResponse
+
+			codec.Cdc.UnmarshalJSON(delegateResponses, &delegations)
+			f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/delegations.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+			for _, delegation := range delegations {
+				f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s\n", delegation.DelegatorAddress.String(), delegation.ValidatorAddress.String(), delegation.Balance.Int64(), uint64(ctx.BlockHeight()), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID()))
+			}
+			f.Close()
+			fmt.Printf("Re-exported %d delegations\n", len(delegations))
+		case "begin_unbonding":
+			ubdMsg, ok := msg.(staking.MsgUndelegate)
+			if !ok {
+				panic("Unable to cast unbonding message to MsgUndelegate type")
+			}
+			// check unbonding entries for this delegator/validator pair. if none exist for this height, add a new one with 0 value and expiry of unix epoch.
+			params := staking.QueryDelegatorParams{ubdMsg.DelegatorAddress}
+			data, err := codec.Cdc.MarshalJSON(params)
+			if err != nil {
+				fmt.Println(err)
+			}
+			unbondingResponses, _, err := querier.QueryWithData("custom/staking/delegatorUnbondingDelegations", data)
+			if err != nil {
+				fmt.Println(err)
+			}
+			var unbondings []staking.UnbondingDelegation
+
+			codec.Cdc.UnmarshalJSON(unbondingResponses, &unbondings)
+
+			for _, ubd := range unbondings {
+				if ubd.ValidatorAddress.String() != ubdMsg.ValidatorAddress.String() {
+					fmt.Println("Validator mismatch; skipping...")
+					continue
+				}
+				foundMatch := false
+				for _, entry := range ubd.Entries {
+					if entry.CreationHeight != ctx.BlockHeight() {
+						fmt.Println("Entry not created this height. Skipping...")
+						continue
+					} else {
+						foundMatch = true
+					}
+				}
+
+				if !foundMatch {
+					f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/unbond.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+					f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s,%s\n", ubd.DelegatorAddress, ubd.ValidatorAddress, 0, uint64(ctx.BlockHeight()), "1970-01-01 00:00:00", ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID()))
+					fmt.Println("Rolled back unbonding entry")
+					f.Close()
+				}
+			}
+
+		default:
+			fmt.Printf("Unhandled message type %s; no action required.\n", msg.Type())
+		}
+
 	}
 
-	fmt.Printf("%v", addrs)
+	fmt.Printf("Found %d addresses to revert", len(addrs))
 
 	for _, addr := range addrs {
 		nq, ok := querier.(types.NodeQuerier)
@@ -1076,16 +1145,38 @@ func txRollback(app *BaseApp, ctx sdk.Context, msgs []sdk.Msg) {
 
 		acc, err := ar.GetAccount(addr)
 		if err != nil {
-			panic(err)
+			fmt.Printf("Unable to retrieve account for account %s; should set to zero\n", addr.String())
+			data, err := codec.Cdc.MarshalJSON(QueryTotalSupplyParams{0, 100})
+			if err != nil {
+				panic(err)
+			}
+			result, _, err := querier.QueryWithData("custom/supply/total_supply", data)
+			if err != nil {
+				panic(err)
+			}
+			var supply sdk.Coins
+			codec.Cdc.UnmarshalJSON(result, &supply)
+			fmt.Printf("%v+\n", supply)
+			fmt.Println("Exporting zerod balance")
+			f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/balance.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+			for _, coin := range supply {
+				f.WriteString(fmt.Sprintf("%s,%s,%s,%d,%s,%s,%d, %d\n", acc.GetAddress(), coin.Denom, "0", ctx.BlockHeight(), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID(), 0, 0))
+			}
+			f.Close()
+		} else {
+			fmt.Println("Exporting rolled back balance")
+			f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/balance.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+			for _, i := range acc.GetCoins() {
+				f.WriteString(fmt.Sprintf("%s,%s,%s,%d,%s,%s,%d, %d\n", acc.GetAddress(), i.Denom, i.Amount.String(), ctx.BlockHeight(), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID(), acc.GetAccountNumber(), acc.GetSequence()))
+			}
+			f.Close()
 		}
-
-		f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/balance.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-		for _, i := range acc.GetCoins() {
-			f.WriteString(fmt.Sprintf("%s,%s,%s,%d,%s,%s,%d, %d\n", acc.GetAddress(), i.Denom, i.Amount.String(), ctx.BlockHeight(), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID(), acc.GetAccountNumber(), acc.GetSequence()))
-		}
-		f.Close()
 
 	}
+}
+
+type QueryTotalSupplyParams struct {
+	Page, Limit int
 }
 
 type AppQuerier struct {
@@ -1109,10 +1200,6 @@ func (a AppQuerier) QueryWithData(path string, data []byte) ([]byte, int64, erro
 		return []byte{}, 0, err
 	}
 	return res, a.ctx.BlockHeight(), nil
-}
-
-type QueryBalanceParams struct {
-	Address sdk.AccAddress
 }
 
 // EndBlock implements the ABCI interface.
