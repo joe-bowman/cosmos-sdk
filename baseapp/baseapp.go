@@ -741,11 +741,11 @@ func (app *BaseApp) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliv
 	for idx, msg := range sdktx.GetMsgs() {
 		f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/messages.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 		msgString, _ := codec.Cdc.MarshalJSON(msg)
-		f.WriteString(fmt.Sprintf("%s,%d,%s,\"%s\",%s,%s\n",
+		f.WriteString(fmt.Sprintf("%s,%d,%s,$%s$,%s,%s\n",
 			txHash,
 			idx,
 			msg.Type(),
-			strings.ReplaceAll(string(msgString), "\"", "\"\""),
+			strings.ReplaceAll(string(msgString), "$", "\\$"),
 			ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"),
 			ctx.ChainID()))
 		f.Close()
@@ -753,17 +753,17 @@ func (app *BaseApp) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliv
 	}
 
 	f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/txs.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-	f.WriteString(fmt.Sprintf("%s,%d,%d,%d,%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%s,%s\n",
+	f.WriteString(fmt.Sprintf("%s,%d,%d,%d,%d,$%s$,$%s$,$%s$,$%s$,$%s$,%s,%s\n",
 		txHash,
 		ctx.BlockHeight(),
 		uint32(result.Code),
 		int64(result.GasWanted),
 		int64(result.GasUsed),
-		strings.ReplaceAll(result.Log, "\"", "\"\""),
-		strings.ReplaceAll(string(jsonMemo), "\"", "\"\""),
-		strings.ReplaceAll(string(jsonFee), "\"", "\"\""),
-		strings.ReplaceAll(string(jsonTags), "\"", "\"\""),
-		strings.ReplaceAll(string(jsonMsgs), "\"", "\"\""),
+		strings.ReplaceAll(result.Log, "$", "\\$"),
+		strings.ReplaceAll(string(jsonMemo), "$", "\\$"),
+		strings.ReplaceAll(string(jsonFee), "$", "\\$"),
+		strings.ReplaceAll(string(jsonTags), "$", "\\$"),
+		strings.ReplaceAll(string(jsonMsgs), "$", "\\$"),
 		ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"),
 		ctx.ChainID()))
 	f.Close()
