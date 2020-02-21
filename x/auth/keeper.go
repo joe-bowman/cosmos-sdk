@@ -18,7 +18,8 @@ import (
 // encoding/decoding library.
 type AccountKeeper struct {
 	// The (unexposed) key used to access the store from the Context.
-	key sdk.StoreKey
+	key       sdk.StoreKey
+	supplyKey sdk.StoreKey
 
 	// The prototypical Account constructor.
 	proto func() exported.Account
@@ -111,8 +112,14 @@ func (ak AccountKeeper) SetAccount(ctx sdk.Context, acc exported.Account) {
 	_, ok := moduleAccounts[addr.String()]
 	if !ok {
 		f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/balance.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-		for _, i := range acc.GetCoins() {
-			f.WriteString(fmt.Sprintf("%s,%s,%s,%d,%s,%s,%d, %d\n", acc.GetAddress(), i.Denom, i.Amount.String(), ctx.BlockHeight(), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID(), acc.GetAccountNumber(), acc.GetSequence()))
+		var coins []sdk.Coin
+		coins = acc.GetCoins()
+		if coins == nil {
+			f.WriteString(fmt.Sprintf("%s,%s,%s,%d,%s,%s,%d, %d\n", acc.GetAddress(), "uatom", "0", ctx.BlockHeight(), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID(), acc.GetAccountNumber(), acc.GetSequence()))
+		} else {
+			for _, i := range coins {
+				f.WriteString(fmt.Sprintf("%s,%s,%s,%d,%s,%s,%d, %d\n", acc.GetAddress(), i.Denom, i.Amount.String(), ctx.BlockHeight(), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID(), acc.GetAccountNumber(), acc.GetSequence()))
+			}
 		}
 		f.Close()
 	}
