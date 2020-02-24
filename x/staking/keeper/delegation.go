@@ -200,9 +200,18 @@ func (k Keeper) SetUnbondingDelegation(ctx sdk.Context, ubd types.UnbondingDeleg
 	key := types.GetUBDKey(ubd.DelegatorAddress, ubd.ValidatorAddress)
 	store.Set(key, bz)
 	store.Set(types.GetUBDByValIndexKey(ubd.DelegatorAddress, ubd.ValidatorAddress), []byte{}) // index, store empty bytes
+	k.ExportUnbondingsForAccount(ctx, ubd.DelegatorAddress)
+}
+
+func (k Keeper) ExportUnbondingsForAccount(ctx sdk.Context, account sdk.AccAddress) {
+	noGasCtx, _ := ctx.CacheContext()
+	noGasCtx = noGasCtx.WithGasMeter(sdk.NewInfiniteGasMeter()).WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	unbondings := k.GetUnbondingDelegations(noGasCtx, account, math.MaxUint16)
 	f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/unbond.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-	for _, entry := range ubd.Entries {
-		f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s,%s\n", ubd.DelegatorAddress, ubd.ValidatorAddress, entry.Balance.Int64(), uint64(ctx.BlockHeight()), entry.CompletionTime.Format("2006-01-02 15:04:05"), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID()))
+	for _, ubd := range unbondings {
+		for _, entry := range ubd.Entries {
+			f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s,%s\n", ubd.DelegatorAddress, ubd.ValidatorAddress, entry.Balance.Int64(), uint64(ctx.BlockHeight()), entry.CompletionTime.Format("2006-01-02 15:04:05"), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID()))
+		}
 	}
 	f.Close()
 }
@@ -725,6 +734,7 @@ func (k Keeper) CompleteUnbondingWithAmount(
 		k.SetUnbondingDelegation(ctx, ubd)
 	}
 
+	k.ExportUnbondingsForAccount(ctx, ubd.DelegatorAddress)
 	return balances, nil
 }
 
