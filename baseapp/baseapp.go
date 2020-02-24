@@ -1049,6 +1049,27 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 	return result
 }
 
+func rollbackDelegations(ctx sdk.Context, accAddr sdk.AccAddress, querier types.NodeQuerier) {
+	params := staking.QueryDelegatorParams{accAddr}
+	data, err := codec.Cdc.MarshalJSON(params)
+	if err != nil {
+		fmt.Println(err)
+	}
+	delegateResponses, _, err := querier.QueryWithData("custom/staking/delegatorDelegations", data)
+	if err != nil {
+		fmt.Println(err)
+	}
+	var delegations []staking.DelegationResponse
+
+	codec.Cdc.UnmarshalJSON(delegateResponses, &delegations)
+	f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/delegations.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	for _, delegation := range delegations {
+		f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s\n", delegation.DelegatorAddress.String(), delegation.ValidatorAddress.String(), delegation.Balance.Int64(), uint64(ctx.BlockHeight()), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID()))
+	}
+	f.Close()
+	fmt.Printf("Re-exported %d delegations\n", len(delegations))
+}
+
 func txRollback(app *BaseApp, ctx sdk.Context, msgs []sdk.Msg) {
 	var querier types.NodeQuerier
 	querier = AppQuerier{app, ctx}
@@ -1067,24 +1088,8 @@ func txRollback(app *BaseApp, ctx sdk.Context, msgs []sdk.Msg) {
 		fmt.Println(msg.Type())
 		switch msg.Type() {
 		case "delegate", "begin_redelegate":
-			params := staking.QueryDelegatorParams{accAddr}
-			data, err := codec.Cdc.MarshalJSON(params)
-			if err != nil {
-				fmt.Println(err)
-			}
-			delegateResponses, _, err := querier.QueryWithData("custom/staking/delegatorDelegations", data)
-			if err != nil {
-				fmt.Println(err)
-			}
-			var delegations []staking.DelegationResponse
+			rollbackDelegations(ctx, accAddr, querier)
 
-			codec.Cdc.UnmarshalJSON(delegateResponses, &delegations)
-			f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/delegations.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-			for _, delegation := range delegations {
-				f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s\n", delegation.DelegatorAddress.String(), delegation.ValidatorAddress.String(), delegation.Balance.Int64(), uint64(ctx.BlockHeight()), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID()))
-			}
-			f.Close()
-			fmt.Printf("Re-exported %d delegations\n", len(delegations))
 		case "begin_unbonding":
 			ubdMsg, ok := msg.(staking.MsgUndelegate)
 			if !ok {
@@ -1126,6 +1131,7 @@ func txRollback(app *BaseApp, ctx sdk.Context, msgs []sdk.Msg) {
 					f.Close()
 				}
 			}
+			rollbackDelegations(ctx, accAddr, querier)
 
 		default:
 			fmt.Printf("Unhandled message type %s; no action required.\n", msg.Type())
