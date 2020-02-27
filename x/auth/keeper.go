@@ -18,8 +18,7 @@ import (
 // encoding/decoding library.
 type AccountKeeper struct {
 	// The (unexposed) key used to access the store from the Context.
-	key       sdk.StoreKey
-	supplyKey sdk.StoreKey
+	key sdk.StoreKey
 
 	// The prototypical Account constructor.
 	proto func() exported.Account
