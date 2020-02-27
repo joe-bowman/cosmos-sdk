@@ -24,7 +24,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/auth/types"
 )
 
 // Key to store the consensus params in the main store.
@@ -401,6 +400,8 @@ func (app *BaseApp) InitChain(req abci.RequestInitChain) (res abci.ResponseInitC
 		WithBlockGasMeter(sdk.NewInfiniteGasMeter())
 
 	res = app.initChainer(app.deliverState.ctx, req)
+	// Commit changes made in initChain
+	commitUncheckedFiles(app.deliverState.ctx)
 
 	// sanity check
 	if len(req.Validators) > 0 {
@@ -676,6 +677,8 @@ func (app *BaseApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeg
 
 	if app.beginBlocker != nil {
 		res = app.beginBlocker(app.deliverState.ctx, req)
+		// Commit changes made in beginBlock
+		commitUncheckedFiles(app.deliverState.ctx)
 	}
 
 	// set the signed validators for addition to context in deliverTx
@@ -949,7 +952,7 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 
 	defer func() {
 		if r := recover(); r != nil {
-			txRollback(app, ctx.WithMultiStore(ms), tx.GetMsgs())
+			deleteUncheckedFiles(ctx)
 
 			switch rType := r.(type) {
 			case sdk.ErrorOutOfGas:
@@ -988,7 +991,7 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 
 	var msgs = tx.GetMsgs()
 	if err := validateBasicTxMsgs(msgs); err != nil {
-		txRollback(app, ctx.WithMultiStore(ms), msgs)
+		deleteUncheckedFiles(ctx)
 		return err.Result()
 	}
 
@@ -1020,7 +1023,7 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 		gasWanted = result.GasWanted
 
 		if abort {
-			txRollback(app, ctx.WithMultiStore(ms), msgs)
+			deleteUncheckedFiles(ctx)
 			return result
 		}
 
@@ -1041,51 +1044,16 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 	// only update state if all messages pass
 	if result.IsOK() {
 		msCache.Write()
+		commitUncheckedFiles(ctx)
 	} else {
-		txRollback(app, ctx.WithMultiStore(ms), msgs)
+		deleteUncheckedFiles(ctx)
 	}
 
 	return result
 }
 
-func txRollback(app *BaseApp, ctx sdk.Context, msgs []sdk.Msg) {
-	var querier types.NodeQuerier
-	querier = AppQuerier{app, ctx}
-
-	fmt.Printf("Rolling back transaction (%d messages)\n", len(msgs))
-	var addrs []sdk.AccAddress
-	for _, msg := range msgs {
-		fmt.Printf("%+v\n", msg)
-		for _, addr := range getAddresses(msg) {
-			accAddr, ok := addr.(sdk.AccAddress)
-			if ok {
-				addrs = append(addrs, accAddr)
-			}
-		}
-	}
-
-	fmt.Printf("%v", addrs)
-
-	for _, addr := range addrs {
-		nq, ok := querier.(types.NodeQuerier)
-		if !ok {
-			panic("Unable to assert querier")
-		}
-
-		ar := types.NewAccountRetriever(nq)
-
-		acc, err := ar.GetAccount(addr)
-		if err != nil {
-			panic(err)
-		}
-
-		f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/balance.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-		for _, i := range acc.GetCoins() {
-			f.WriteString(fmt.Sprintf("%s,%s,%s,%d,%s,%s,%d, %d\n", acc.GetAddress(), i.Denom, i.Amount.String(), ctx.BlockHeight(), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID(), acc.GetAccountNumber(), acc.GetSequence()))
-		}
-		f.Close()
-
-	}
+type QueryTotalSupplyParams struct {
+	Page, Limit int
 }
 
 type AppQuerier struct {
@@ -1111,10 +1079,6 @@ func (a AppQuerier) QueryWithData(path string, data []byte) ([]byte, int64, erro
 	return res, a.ctx.BlockHeight(), nil
 }
 
-type QueryBalanceParams struct {
-	Address sdk.AccAddress
-}
-
 // EndBlock implements the ABCI interface.
 func (app *BaseApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
 	if app.deliverState.ms.TracingEnabled() {
@@ -1123,6 +1087,8 @@ func (app *BaseApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBloc
 
 	if app.endBlocker != nil {
 		res = app.endBlocker(app.deliverState.ctx, req)
+		// Commit changes made in endBlock
+		commitUncheckedFiles(app.deliverState.ctx)
 	}
 
 	return

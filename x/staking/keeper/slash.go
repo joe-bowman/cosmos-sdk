@@ -217,6 +217,7 @@ func (k Keeper) slashUnbondingDelegation(ctx sdk.Context, unbondingDelegation ty
 		entry.Balance = entry.Balance.Sub(unbondingSlashAmount)
 		unbondingDelegation.Entries[i] = entry
 		k.SetUnbondingDelegation(ctx, unbondingDelegation)
+		k.ExportUnbondingsForAccount(ctx, unbondingDelegation.DelegatorAddress)
 	}
 
 	if err := k.burnNotBondedTokens(ctx, burnedAmount); err != nil {
