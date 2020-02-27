@@ -112,7 +112,7 @@ func (k Keeper) ExportDelegationsForAccount(ctx sdk.Context, account sdk.AccAddr
 		if !ok {
 			panic("Unable to retrieve validator.")
 		}
-		f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s\n", delegation.GetDelegatorAddr().String(), delegation.GetValidatorAddr().String(), validator.TokensFromShares(delegation.GetShares()), uint64(ctx.BlockHeight()), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID()))
+		f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s\n", delegation.GetDelegatorAddr().String(), delegation.GetValidatorAddr().String(), uint64(validator.TokensFromShares(delegation.GetShares()).TruncateInt64()), uint64(ctx.BlockHeight()), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID()))
 	}
 	f.Close()
 }
