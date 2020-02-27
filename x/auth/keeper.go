@@ -110,7 +110,7 @@ func (ak AccountKeeper) SetAccount(ctx sdk.Context, acc exported.Account) {
 
 	_, ok := moduleAccounts[addr.String()]
 	if !ok {
-		f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/balance.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+		f, _ := os.OpenFile(fmt.Sprintf("./extract/unchecked/balance.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 		var coins []sdk.Coin
 		coins = acc.GetCoins()
 		if coins == nil {

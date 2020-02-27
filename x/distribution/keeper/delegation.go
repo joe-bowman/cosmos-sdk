@@ -186,7 +186,7 @@ func (k Keeper) withdrawDelegationRewards(ctx sdk.Context, val exported.Validato
 	startingPeriod := startingInfo.PreviousPeriod
 	k.decrementReferenceCount(ctx, del.GetValidatorAddr(), startingPeriod)
 
-	f2, _ := os.OpenFile(fmt.Sprintf("./extract/progress/rewards.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	f2, _ := os.OpenFile(fmt.Sprintf("./extract/unchecked/rewards.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	for _, coin := range coins {
 		f2.WriteString(fmt.Sprintf("%s,%s,%s,%d,%d,%s,%s\n", del.GetDelegatorAddr().String(), del.GetValidatorAddr().String(), coin.Denom, uint64(coin.Amount.Int64()), uint64(ctx.BlockHeight()), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID()))
 	}
