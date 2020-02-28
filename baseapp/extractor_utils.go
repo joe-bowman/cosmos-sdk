@@ -52,3 +52,11 @@ func deleteUncheckedFiles(ctx sdk.Context) {
 		}
 	}
 }
+
+func (app *BaseApp) SetExtractDataMode() {
+	app.extractData = true
+}
+
+func (app *BaseApp) GetExtractDataMode() bool {
+	return app.extractData
+}

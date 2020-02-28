@@ -93,7 +93,10 @@ type BaseApp struct {
 	haltTime uint64
 
 	// application's version string
-	appVersion string
+	appVersion  string
+
+	// Enable/Disable extract data
+	extractData bool
 }
 
 var _ abci.Application = (*BaseApp)(nil)
@@ -314,9 +317,13 @@ func (app *BaseApp) setCheckState(header abci.Header) {
 // and deliverState is set nil on Commit().
 func (app *BaseApp) setDeliverState(header abci.Header) {
 	ms := app.cms.CacheMultiStore()
+	ctx := sdk.NewContext(ms, header, false, app.logger)
+	if app.GetExtractDataMode() {
+		ctx = ctx.WithValue("ExtractDataMode", true)
+	}
 	app.deliverState = &state{
 		ms:  ms,
-		ctx: sdk.NewContext(ms, header, false, app.logger),
+		ctx: ctx,
 	}
 }
 
