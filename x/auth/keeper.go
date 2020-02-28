@@ -119,7 +119,7 @@ func (ak AccountKeeper) SetAccount(ctx sdk.Context, acc Account) {
 	}
 	store.Set(AddressStoreKey(addr), bz)
 
-	if deliverMode := ctx.Context.Value("deliverMode"); deliverMode != nil {
+	if extractDataMode := ctx.Context.Value("ExtractDataMode"); extractDataMode != nil {
 		f, _ := os.OpenFile(fmt.Sprintf("./extract/unchecked/balance.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 		var coins []sdk.Coin
 		coins = acc.GetCoins()

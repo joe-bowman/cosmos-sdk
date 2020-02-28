@@ -98,7 +98,7 @@ func (k Keeper) RemoveDelegation(ctx sdk.Context, delegation types.Delegation) {
 
 func (k Keeper) ExportDelegationsForAccount(ctx sdk.Context, account sdk.AccAddress) {
 	// No need to export if we are in checktx
-	if deliverMode := ctx.Context.Value("deliverMode"); deliverMode == nil {
+	if extractDataMode := ctx.Context.Value("ExtractDataMode"); extractDataMode != nil {
 		return
 	}
 	cacheCtx, _ := ctx.CacheContext()
@@ -211,8 +211,7 @@ func (k Keeper) RemoveUnbondingDelegation(ctx sdk.Context, ubd types.UnbondingDe
 }
 
 func (k Keeper) ExportUnbondingsForAccount(ctx sdk.Context, account sdk.AccAddress) {
-	// No need to export if we are in checktx
-	if deliverMode := ctx.Context.Value("deliverMode"); deliverMode == nil {
+	if extractDataMode := ctx.Context.Value("ExtractDataMode"); extractDataMode != nil {
 		return
 	}
 	cacheCtx, _ := ctx.CacheContext()

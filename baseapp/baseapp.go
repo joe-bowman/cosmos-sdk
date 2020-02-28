@@ -273,7 +273,7 @@ func (app *BaseApp) setDeliverState(header abci.Header) {
 	ms := app.cms.CacheMultiStore()
 	ctx := sdk.NewContext(ms, header, false, app.logger)
 	if app.GetExtractDataMode() {
-		ctx = ctx.WithValue("deliverMode", true)
+		ctx = ctx.WithValue("ExtractDataMode", true)
 	}
 	app.deliverState = &state{
 		ms:  ms,
