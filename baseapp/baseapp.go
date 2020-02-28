@@ -61,7 +61,7 @@ type BaseApp struct {
 	addrPeerFilter sdk.PeerFilter   // filter peers by address and port
 	idPeerFilter   sdk.PeerFilter   // filter peers by node ID
 	fauxMerkleMode bool             // if true, IAVL MountStores uses MountStoresDB for simulation speed.
-
+	extractData    bool
 	// --------------------
 	// Volatile state
 	// checkState is set on initialization and reset on Commit.
@@ -103,6 +103,7 @@ func NewBaseApp(
 		queryRouter:    NewQueryRouter(),
 		txDecoder:      txDecoder,
 		fauxMerkleMode: false,
+		extractData:    false,
 	}
 	for _, option := range options {
 		option(app)
@@ -270,9 +271,13 @@ func (app *BaseApp) setCheckState(header abci.Header) {
 // and deliverState is set nil on Commit().
 func (app *BaseApp) setDeliverState(header abci.Header) {
 	ms := app.cms.CacheMultiStore()
+	ctx := sdk.NewContext(ms, header, false, app.logger)
+	if app.GetExtractDataMode() {
+		ctx = ctx.WithValue("deliverMode", true)
+	}
 	app.deliverState = &state{
 		ms:  ms,
-		ctx: sdk.NewContext(ms, header, false, app.logger).WithValue("deliverMode", true),
+		ctx: ctx,
 	}
 }
 
@@ -636,7 +641,9 @@ func (app *BaseApp) DeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) {
 		Tags:      result.Tags,
 	}
 
-	recordTxData(app, txBytes, tx, response)
+	if app.GetExtractDataMode() {
+		recordTxData(app, txBytes, tx, response)
+	}
 
 	return response
 
@@ -795,7 +802,6 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 
 	ctx := app.getContextForTx(mode, txBytes)
 	ms := ctx.MultiStore()
-
 
 	// only run the tx if there is block gas remaining
 	if mode == runTxModeDeliver && ctx.BlockGasMeter().IsOutOfGas() {
