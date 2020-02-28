@@ -106,15 +106,18 @@ func (k Keeper) ExportDelegationsForAccount(ctx sdk.Context, account sdk.AccAddr
 	noGasCtx, _ := ctx.CacheContext()
 	noGasCtx = noGasCtx.WithGasMeter(sdk.NewInfiniteGasMeter()).WithBlockGasMeter(sdk.NewInfiniteGasMeter())
 	delegations := k.GetDelegatorDelegations(noGasCtx, account, math.MaxUint16)
-	f, _ := os.OpenFile(fmt.Sprintf("./extract/unchecked/delegations.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-	for _, delegation := range delegations {
-		validator, ok := k.GetValidator(noGasCtx, delegation.GetValidatorAddr())
-		if !ok {
-			panic("Unable to retrieve validator.")
+
+	if ctx.Value("ExtractDataMode") != nil {
+		f, _ := os.OpenFile(fmt.Sprintf("./extract/unchecked/delegations.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+		for _, delegation := range delegations {
+			validator, ok := k.GetValidator(noGasCtx, delegation.GetValidatorAddr())
+			if !ok {
+				panic("Unable to retrieve validator.")
+			}
+			f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s\n", delegation.GetDelegatorAddr().String(), delegation.GetValidatorAddr().String(), uint64(validator.TokensFromShares(delegation.GetShares()).TruncateInt64()), uint64(ctx.BlockHeight()), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID()))
 		}
-		f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s\n", delegation.GetDelegatorAddr().String(), delegation.GetValidatorAddr().String(), uint64(validator.TokensFromShares(delegation.GetShares()).TruncateInt64()), uint64(ctx.BlockHeight()), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID()))
+		f.Close()
 	}
-	f.Close()
 }
 
 // return a given amount of all the delegator unbonding-delegations
@@ -207,13 +210,15 @@ func (k Keeper) ExportUnbondingsForAccount(ctx sdk.Context, account sdk.AccAddre
 	noGasCtx, _ := ctx.CacheContext()
 	noGasCtx = noGasCtx.WithGasMeter(sdk.NewInfiniteGasMeter()).WithBlockGasMeter(sdk.NewInfiniteGasMeter())
 	unbondings := k.GetUnbondingDelegations(noGasCtx, account, math.MaxUint16)
-	f, _ := os.OpenFile(fmt.Sprintf("./extract/unchecked/unbond.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-	for _, ubd := range unbondings {
-		for _, entry := range ubd.Entries {
-			f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s,%s\n", ubd.DelegatorAddress, ubd.ValidatorAddress, entry.Balance.Int64(), uint64(ctx.BlockHeight()), entry.CompletionTime.Format("2006-01-02 15:04:05"), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID()))
+	if ctx.Value("ExtractDataMode") != nil {
+		f, _ := os.OpenFile(fmt.Sprintf("./extract/unchecked/unbond.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+		for _, ubd := range unbondings {
+			for _, entry := range ubd.Entries {
+				f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s,%s\n", ubd.DelegatorAddress, ubd.ValidatorAddress, entry.Balance.Int64(), uint64(ctx.BlockHeight()), entry.CompletionTime.Format("2006-01-02 15:04:05"), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID()))
+			}
 		}
+		f.Close()
 	}
-	f.Close()
 }
 
 // remove the unbonding delegation object and associated index
