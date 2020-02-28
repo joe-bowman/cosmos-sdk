@@ -3,15 +3,16 @@ package baseapp
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
+	"reflect"
+	"strings"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/tmhash"
-	"io"
-	"os"
-	"reflect"
-	"strings"
 )
 
 func recordTxData(app *BaseApp, txBytes []byte, tx sdk.Tx, result abci.ResponseDeliverTx) {
@@ -116,7 +117,7 @@ func copyFile(destination string, source string) error {
 	}
 	defer sourceFile.Close()
 
-	destinationFile, err := os.OpenFile(destination, os.O_WRONLY | os.O_CREATE | os.O_APPEND, 0644)
+	destinationFile, err := os.OpenFile(destination, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		return fmt.Errorf("error: (%v) while trying to open destination file while copying", err)
 	}
@@ -149,4 +150,12 @@ func deleteUncheckedFiles(ctx sdk.Context) {
 			panic(fmt.Sprintf("error: (%v) while removing unchecked file\n", err))
 		}
 	}
+}
+
+func (app *BaseApp) SetExtractDataMode() {
+	app.extractData = true
+}
+
+func (app *BaseApp) GetExtractDataMode() bool {
+	return app.extractData
 }
