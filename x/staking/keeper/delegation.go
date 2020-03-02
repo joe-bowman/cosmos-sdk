@@ -232,6 +232,14 @@ func (k Keeper) ExportUnbondingsForAccount(ctx sdk.Context, account sdk.AccAddre
 	}
 }
 
+func (k Keeper) ExportZeroUnbondingEntryForAccount(ctx sdk.Context, ubd types.UnbondingDelegation, entry types.UnbondingDelegationEntry) {
+	if ctx.Value("ExtractDataMode") != nil {
+		f, _ := os.OpenFile(fmt.Sprintf("./extract/unchecked/unbond.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+		f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s,%s\n", ubd.DelegatorAddress, ubd.ValidatorAddress, 0, uint64(ctx.BlockHeight()), entry.CompletionTime.Format("2006-01-02 15:04:05"), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID()))
+		f.Close()
+	}
+}
+
 // remove the unbonding delegation object and associated index
 func (k Keeper) RemoveUnbondingDelegation(ctx sdk.Context, ubd types.UnbondingDelegation) {
 	store := ctx.KVStore(k.storeKey)
@@ -728,7 +736,7 @@ func (k Keeper) CompleteUnbondingWithAmount(
 		if entry.IsMature(ctxTime) {
 			ubd.RemoveEntry(int64(i))
 			i--
-
+			k.ExportZeroUnbondingEntryForAccount(ctx, ubd, entry)
 			// track undelegation only when remaining or truncated shares are non-zero
 			if !entry.Balance.IsZero() {
 				amt := sdk.NewCoins(sdk.NewCoin(bondDenom, entry.Balance))
