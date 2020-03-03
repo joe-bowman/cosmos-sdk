@@ -11,12 +11,14 @@ require (
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/mock v1.3.1-0.20190508161146-9fa652df1129
 	github.com/gorilla/mux v1.7.0
-	github.com/mattn/go-isatty v0.0.6
+	github.com/mattn/go-isatty v0.0.12
+	github.com/onsi/ginkgo v1.8.0 // indirect
+	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/pelletier/go-toml v1.2.0
 	github.com/pkg/errors v0.8.1
 	github.com/rakyll/statik v0.1.5
 	github.com/spf13/afero v1.2.1 // indirect
-	github.com/spf13/cobra v0.0.5
+	github.com/spf13/cobra v0.0.6
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.6.1
@@ -27,5 +29,7 @@ require (
 	github.com/tendermint/iavl v0.12.4
 	github.com/tendermint/tendermint v0.32.9
 	github.com/tendermint/tm-db v0.2.0
-	gopkg.in/yaml.v2 v2.2.7
+	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073 // indirect
+	golang.org/x/sys v0.0.0-20200302150141-5c8b2ff67527 // indirect
+	gopkg.in/yaml.v2 v2.2.8
 )
