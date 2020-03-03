@@ -1035,6 +1035,7 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 		}
 
 		msCache.Write()
+		commitUncheckedFiles(ctx)
 	}
 
 	// Create a new context based off of the existing context with a cache wrapped
