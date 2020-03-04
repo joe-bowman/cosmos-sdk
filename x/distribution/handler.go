@@ -50,7 +50,7 @@ func handleMsgModifyWithdrawAddress(ctx sdk.Context, msg types.MsgSetWithdrawAdd
 }
 
 func handleMsgWithdrawDelegatorReward(ctx sdk.Context, msg types.MsgWithdrawDelegatorReward, k keeper.Keeper) sdk.Result {
-	_, err := k.WithdrawDelegationRewards(ctx, msg.DelegatorAddress, msg.ValidatorAddress)
+	_, err := k.WithdrawDelegationRewardsWithSource(ctx, msg.DelegatorAddress, msg.ValidatorAddress, types.WithdrawSourceExplicit)
 	if err != nil {
 		return err.Result()
 	}
@@ -67,7 +67,7 @@ func handleMsgWithdrawDelegatorReward(ctx sdk.Context, msg types.MsgWithdrawDele
 }
 
 func handleMsgWithdrawValidatorCommission(ctx sdk.Context, msg types.MsgWithdrawValidatorCommission, k keeper.Keeper) sdk.Result {
-	_, err := k.WithdrawValidatorCommission(ctx, msg.ValidatorAddress)
+	_, err := k.WithdrawValidatorCommissionWithSource(ctx, msg.ValidatorAddress, types.WithdrawSourceExplicit)
 	if err != nil {
 		return err.Result()
 	}

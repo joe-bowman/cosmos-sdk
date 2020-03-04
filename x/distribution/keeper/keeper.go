@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -74,8 +75,12 @@ func (k Keeper) SetWithdrawAddr(ctx sdk.Context, delegatorAddr sdk.AccAddress, w
 	return nil
 }
 
-// withdraw rewards from a delegation
 func (k Keeper) WithdrawDelegationRewards(ctx sdk.Context, delAddr sdk.AccAddress, valAddr sdk.ValAddress) (sdk.Coins, sdk.Error) {
+	return k.WithdrawDelegationRewardsWithSource(ctx, delAddr, valAddr, types.WithdrawSourceNoSource)
+}
+
+// withdraw rewards from a delegation
+func (k Keeper) WithdrawDelegationRewardsWithSource(ctx sdk.Context, delAddr sdk.AccAddress, valAddr sdk.ValAddress, source int) (sdk.Coins, sdk.Error) {
 	val := k.stakingKeeper.Validator(ctx, valAddr)
 	if val == nil {
 		return nil, types.ErrNoValidatorDistInfo(k.codespace)
@@ -87,7 +92,7 @@ func (k Keeper) WithdrawDelegationRewards(ctx sdk.Context, delAddr sdk.AccAddres
 	}
 
 	// withdraw rewards
-	rewards, err := k.withdrawDelegationRewards(ctx, val, del)
+	rewards, err := k.withdrawDelegationRewards(ctx, val, del, source)
 	if err != nil {
 		return nil, err
 	}
@@ -107,6 +112,10 @@ func (k Keeper) WithdrawDelegationRewards(ctx sdk.Context, delAddr sdk.AccAddres
 
 // withdraw validator commission
 func (k Keeper) WithdrawValidatorCommission(ctx sdk.Context, valAddr sdk.ValAddress) (sdk.Coins, sdk.Error) {
+	return k.WithdrawValidatorCommissionWithSource(ctx, valAddr, types.WithdrawSourceNoSource)
+}
+
+func (k Keeper) WithdrawValidatorCommissionWithSource(ctx sdk.Context, valAddr sdk.ValAddress, source int) (sdk.Coins, sdk.Error) {
 	// fetch validator accumulated commission
 	accumCommission := k.GetValidatorAccumulatedCommission(ctx, valAddr)
 	if accumCommission.IsZero() {
@@ -135,6 +144,16 @@ func (k Keeper) WithdrawValidatorCommission(ctx sdk.Context, valAddr sdk.ValAddr
 			sdk.NewAttribute(sdk.AttributeKeyAmount, commission.String()),
 		),
 	)
+
+	if ctx.Value("ExtractDataMode") != nil {
+		// for each coin type withdrawn, insert a row with 0 value.
+		f2, _ := os.OpenFile(fmt.Sprintf("./extract/unchecked/commission.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+		for _, coin := range commission {
+			f2.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s,%d\n", valAddr.String(), coin.Denom, uint64(coin.Amount.Int64()), uint64(ctx.BlockHeight()), ctx.BlockTime().Format("2006-01-02 15:04:05"), ctx.ChainID(), source))
+			f2.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s,%d\n", valAddr.String(), coin.Denom, 0, uint64(ctx.BlockHeight()), ctx.BlockTime().Format("2006-01-02 15:04:05"), ctx.ChainID(), types.WithdrawSourceZero))
+		}
+		f2.Close()
+	}
 
 	return commission, nil
 }

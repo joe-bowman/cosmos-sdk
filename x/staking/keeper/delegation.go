@@ -99,6 +99,7 @@ func (k Keeper) RemoveDelegation(ctx sdk.Context, delegation types.Delegation) {
 	k.BeforeDelegationRemoved(ctx, delegation.DelegatorAddress, delegation.ValidatorAddress)
 	store := ctx.KVStore(k.storeKey)
 	store.Delete(types.GetDelegationKey(delegation.DelegatorAddress, delegation.ValidatorAddress))
+	k.ExportZeroDelegationForAccount(ctx, delegation.DelegatorAddress, delegation.ValidatorAddress)
 	k.ExportDelegationsForAccount(ctx, delegation.DelegatorAddress)
 }
 
@@ -116,6 +117,16 @@ func (k Keeper) ExportDelegationsForAccount(ctx sdk.Context, account sdk.AccAddr
 			}
 			f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s\n", delegation.GetDelegatorAddr().String(), delegation.GetValidatorAddr().String(), uint64(validator.TokensFromShares(delegation.GetShares()).TruncateInt64()), uint64(ctx.BlockHeight()), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID()))
 		}
+		f.Close()
+	}
+}
+
+func (k Keeper) ExportZeroDelegationForAccount(ctx sdk.Context, account sdk.AccAddress, validator sdk.ValAddress) {
+	noGasCtx, _ := ctx.CacheContext()
+	noGasCtx = noGasCtx.WithGasMeter(sdk.NewInfiniteGasMeter()).WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	if ctx.Value("ExtractDataMode") != nil {
+		f, _ := os.OpenFile(fmt.Sprintf("./extract/unchecked/delegations.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+		f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s\n", account.String(), validator.String(), 0, uint64(ctx.BlockHeight()), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID()))
 		f.Close()
 	}
 }
@@ -217,6 +228,14 @@ func (k Keeper) ExportUnbondingsForAccount(ctx sdk.Context, account sdk.AccAddre
 				f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s,%s\n", ubd.DelegatorAddress, ubd.ValidatorAddress, entry.Balance.Int64(), uint64(ctx.BlockHeight()), entry.CompletionTime.Format("2006-01-02 15:04:05"), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID()))
 			}
 		}
+		f.Close()
+	}
+}
+
+func (k Keeper) ExportZeroUnbondingEntryForAccount(ctx sdk.Context, ubd types.UnbondingDelegation, entry types.UnbondingDelegationEntry) {
+	if ctx.Value("ExtractDataMode") != nil {
+		f, _ := os.OpenFile(fmt.Sprintf("./extract/unchecked/unbond.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+		f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s,%s\n", ubd.DelegatorAddress, ubd.ValidatorAddress, 0, uint64(ctx.BlockHeight()), entry.CompletionTime.Format("2006-01-02 15:04:05"), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID()))
 		f.Close()
 	}
 }
@@ -717,7 +736,7 @@ func (k Keeper) CompleteUnbondingWithAmount(
 		if entry.IsMature(ctxTime) {
 			ubd.RemoveEntry(int64(i))
 			i--
-
+			k.ExportZeroUnbondingEntryForAccount(ctx, ubd, entry)
 			// track undelegation only when remaining or truncated shares are non-zero
 			if !entry.Balance.IsZero() {
 				amt := sdk.NewCoins(sdk.NewCoin(bondDenom, entry.Balance))
