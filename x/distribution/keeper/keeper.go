@@ -110,8 +110,8 @@ func (k Keeper) WithdrawValidatorCommissionWithSource(ctx sdk.Context, valAddr s
 		defer f.Close()
 
 		for _, coin := range commission {
-			f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s,%d\n", valAddr.String(), coin.Denom, uint64(coin.Amount.Int64()), uint64(ctx.BlockHeight()), ctx.BlockTime().Format("2006-01-02 15:04:05"), ctx.ChainID(), source))
-			f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s,%d\n", valAddr.String(), coin.Denom, 0, uint64(ctx.BlockHeight()), ctx.BlockTime().Format("2006-01-02 15:04:05"), ctx.ChainID(), types.WithdrawSourceZero))
+			f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s,%d\n", valAddr.String(), coin.Denom, uint64(coin.Amount.Int64()), uint64(ctx.BlockHeight()), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID(), source))
+			f.WriteString(fmt.Sprintf("%s,%s,%d,%d,%s,%s,%d\n", valAddr.String(), coin.Denom, 0, uint64(ctx.BlockHeight()), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID(), types.WithdrawSourceZero))
 		}
 	}
 
