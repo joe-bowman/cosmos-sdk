@@ -2,6 +2,7 @@ package keeper
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/distribution/types"
 )
 
 // Wrapper struct
@@ -83,7 +84,7 @@ func (h Hooks) BeforeDelegationSharesModified(ctx sdk.Context, delAddr sdk.AccAd
 	del := h.k.stakingKeeper.Delegation(ctx, delAddr, valAddr)
 
 	// withdraw delegation rewards (which also increments period)
-	if _, err := h.k.withdrawDelegationRewards(ctx, val, del); err != nil {
+	if _, err := h.k.withdrawDelegationRewards(ctx, val, del, types.WithdrawSourceDelegationModified); err != nil {
 		panic(err)
 	}
 }
