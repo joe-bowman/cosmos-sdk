@@ -57,7 +57,7 @@ ldflags := $(strip $(ldflags))
 
 BUILD_FLAGS := -tags "$(build_tags)" -ldflags '$(ldflags)'
 
-all: devtools vendor-deps install test_lint test
+all: devtools install test_lint test
 
 # The below include contains the tools target.
 include scripts/Makefile
@@ -65,7 +65,7 @@ include scripts/Makefile
 ########################################
 ### CI
 
-ci: devtools vendor-deps install test_cover test_lint test
+ci: devtools install test_cover test_lint test
 
 ########################################
 ### Build/Install
@@ -81,7 +81,7 @@ else
 	go build $(BUILD_FLAGS) -o build/gaiakeyutil ./cmd/gaia/cmd/gaiakeyutil
 endif
 
-build-linux: vendor-deps
+build-linux: 
 	LEDGER_ENABLED=false GOOS=linux GOARCH=amd64 $(MAKE) build
 
 update_gaia_lite_docs:

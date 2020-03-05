@@ -124,7 +124,10 @@ func delegatorTxsHandlerFn(cliCtx context.CLIContext, cdc *codec.Codec) http.Han
 			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
-
+		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
+		if !ok {
+			return
+		}
 		node, err := cliCtx.GetNode()
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -229,7 +232,10 @@ func redelegationsHandlerFn(cliCtx context.CLIContext, cdc *codec.Codec) http.Ha
 			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
-
+		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
+		if !ok {
+			return
+		}
 		res, err := cliCtx.QueryWithData("custom/staking/redelegations", bz)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -257,6 +263,10 @@ func delegatorValidatorHandlerFn(cliCtx context.CLIContext, cdc *codec.Codec) ht
 // HTTP request handler to query list of validators
 func validatorsHandlerFn(cliCtx context.CLIContext, cdc *codec.Codec) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
+		if !ok {
+			return
+		}
 		res, err := cliCtx.QueryWithData("custom/staking/validators", nil)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -284,6 +294,10 @@ func validatorUnbondingDelegationsHandlerFn(cliCtx context.CLIContext, cdc *code
 // HTTP request handler to query the pool information
 func poolHandlerFn(cliCtx context.CLIContext, cdc *codec.Codec) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
+		if !ok {
+			return
+		}
 		res, err := cliCtx.QueryWithData("custom/staking/pool", nil)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -296,6 +310,10 @@ func poolHandlerFn(cliCtx context.CLIContext, cdc *codec.Codec) http.HandlerFunc
 // HTTP request handler to query the staking params values
 func paramsHandlerFn(cliCtx context.CLIContext, cdc *codec.Codec) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
+		if !ok {
+			return
+		}
 		res, err := cliCtx.QueryWithData("custom/staking/parameters", nil)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())

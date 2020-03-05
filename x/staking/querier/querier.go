@@ -203,7 +203,13 @@ func queryDelegatorDelegations(ctx sdk.Context, cdc *codec.Codec, req abci.Reque
 
 	delegations := k.GetAllDelegatorDelegations(ctx, params.DelegatorAddr)
 
-	res, errRes = codec.MarshalJSONIndent(cdc, delegations)
+	delegationResponses, err := delegationsToDelegationResponses(ctx, k, delegations)
+	if err != nil {
+		return nil, err
+	}
+
+	res, errRes = codec.MarshalJSONIndent(cdc, delegationResponses)
+
 	if errRes != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", errRes.Error()))
 	}
@@ -279,7 +285,12 @@ func queryDelegation(ctx sdk.Context, cdc *codec.Codec, req abci.RequestQuery, k
 		return []byte{}, types.ErrNoDelegation(types.DefaultCodespace)
 	}
 
-	res, errRes = codec.MarshalJSONIndent(cdc, delegation)
+	delegationResp, err := delegationToDelegationResponse(ctx, k, delegation)
+	if err != nil {
+		return nil, err
+	}
+
+	res, errRes = codec.MarshalJSONIndent(cdc, delegationResp)
 	if errRes != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", errRes.Error()))
 	}
@@ -353,4 +364,35 @@ func queryParameters(ctx sdk.Context, cdc *codec.Codec, k keep.Keeper) (res []by
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", errRes.Error()))
 	}
 	return res, nil
+}
+
+func delegationToDelegationResponse(ctx sdk.Context, k keep.Keeper, del types.Delegation) (types.DelegationResponse, sdk.Error) {
+	val, found := k.GetValidator(ctx, del.ValidatorAddress)
+	if !found {
+		return types.DelegationResponse{}, sdk.ErrInternal("failed to retrieve validator")
+	}
+
+	return types.NewDelegationResp(
+		del.DelegatorAddress,
+		del.ValidatorAddress,
+		del.Shares,
+		sdk.NewCoin(k.BondDenom(ctx), val.TokensFromShares(del.Shares).TruncateInt()),
+	), nil
+}
+
+func delegationsToDelegationResponses(
+	ctx sdk.Context, k keep.Keeper, delegations types.Delegations,
+) (types.DelegationResponses, sdk.Error) {
+
+	resp := make(types.DelegationResponses, len(delegations))
+	for i, del := range delegations {
+		delResp, err := delegationToDelegationResponse(ctx, k, del)
+		if err != nil {
+			return nil, err
+		}
+
+		resp[i] = delResp
+	}
+
+	return resp, nil
 }

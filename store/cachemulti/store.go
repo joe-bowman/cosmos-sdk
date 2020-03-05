@@ -109,6 +109,15 @@ func (cms Store) Write() {
 	}
 }
 
+// CacheMultiStoreWithVersion implements the MultiStore interface. It will panic
+// as an already cached multi-store cannot load previous versions.
+//
+// TODO: The store implementation can possibly be modified to support this as it
+// seems safe to load previous versions (heights).
+func (cms Store) CacheMultiStoreWithVersion(_ int64) (types.CacheMultiStore, error) {
+	panic("cannot cache-wrap cached multi-store with a version")
+}
+
 // Implements CacheWrapper.
 func (cms Store) CacheWrap() types.CacheWrap {
 	return cms.CacheMultiStore().(types.CacheWrap)

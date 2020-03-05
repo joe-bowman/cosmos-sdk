@@ -69,6 +69,11 @@ func delegatorRewardsHandlerFn(cliCtx context.CLIContext, cdc *codec.Codec,
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		// query for rewards from a particular delegator
+		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
+		if !ok {
+			return
+		}
+
 		res, ok := checkResponseQueryDelegatorTotalRewards(w, cliCtx, cdc, queryRoute,
 			mux.Vars(r)["delegatorAddr"])
 		if !ok {
@@ -85,6 +90,10 @@ func delegationRewardsHandlerFn(cliCtx context.CLIContext, cdc *codec.Codec,
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		// query for rewards from a particular delegation
+		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
+		if !ok {
+			return
+		}
 		res, ok := checkResponseQueryDelegationRewards(w, cliCtx, cdc, queryRoute,
 			mux.Vars(r)["delegatorAddr"], mux.Vars(r)["validatorAddr"])
 		if !ok {
@@ -100,6 +109,11 @@ func delegatorWithdrawalAddrHandlerFn(cliCtx context.CLIContext, cdc *codec.Code
 	queryRoute string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
+		if !ok {
+			return
+		}
+
 		delegatorAddr, ok := checkDelegatorAddressVar(w, r)
 		if !ok {
 			return
@@ -145,6 +159,11 @@ func validatorInfoHandlerFn(cliCtx context.CLIContext, cdc *codec.Codec,
 			return
 		}
 
+		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
+		if !ok {
+			return
+		}
+
 		// query commission
 		commissionRes, err := common.QueryValidatorCommission(cliCtx, cdc, queryRoute, validatorAddr)
 		if err != nil {
@@ -183,6 +202,11 @@ func validatorRewardsHandlerFn(cliCtx context.CLIContext, cdc *codec.Codec,
 			return
 		}
 
+		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
+		if !ok {
+			return
+		}
+
 		delAddr := sdk.AccAddress(validatorAddr).String()
 		res, ok := checkResponseQueryDelegationRewards(w, cliCtx, cdc, queryRoute, delAddr, valAddr)
 		if !ok {
@@ -213,6 +237,11 @@ func outstandingRewardsHandlerFn(cliCtx context.CLIContext, cdc *codec.Codec,
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		validatorAddr, ok := checkValidatorAddressVar(w, r)
+		if !ok {
+			return
+		}
+
+		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
 		if !ok {
 			return
 		}

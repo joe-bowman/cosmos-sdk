@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -210,4 +211,28 @@ func PostProcessResponse(w http.ResponseWriter, cdc *codec.Codec, response inter
 
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(output)
+}
+
+func ParseQueryHeightOrReturnBadRequest(w http.ResponseWriter, cliCtx context.CLIContext, r *http.Request) (context.CLIContext, bool) {
+	heightStr := r.FormValue("height")
+	if heightStr != "" {
+		height, err := strconv.ParseInt(heightStr, 10, 64)
+		if err != nil {
+			WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+			return cliCtx, false
+		}
+
+		if height < 0 {
+			WriteErrorResponse(w, http.StatusBadRequest, "height must be equal or greater than zero")
+			return cliCtx, false
+		}
+
+		if height > 0 {
+			cliCtx = cliCtx.WithHeight(height)
+		}
+	} else {
+		cliCtx = cliCtx.WithHeight(0)
+	}
+
+	return cliCtx, true
 }

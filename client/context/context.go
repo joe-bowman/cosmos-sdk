@@ -247,6 +247,12 @@ func (ctx CLIContext) WithFromAddress(addr sdk.AccAddress) CLIContext {
 	return ctx
 }
 
+// WithHeight returns a copy of the context with an updated height.
+func (ctx CLIContext) WithHeight(height int64) CLIContext {
+	ctx.Height = height
+	return ctx
+}
+
 // PrintOutput prints output while respecting output and indent flags
 // NOTE: pass in marshalled structs that have been unmarshaled
 // because this function will panic on marshaling errors
