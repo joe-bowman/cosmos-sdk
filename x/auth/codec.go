@@ -26,6 +26,10 @@ func RegisterBaseAccount(cdc *codec.Codec) {
 	codec.RegisterCrypto(cdc)
 }
 
+func SetMsgCodec(cdc *codec.Codec) {
+	msgCdc = cdc
+}
+
 var msgCdc = codec.New()
 
 func init() {

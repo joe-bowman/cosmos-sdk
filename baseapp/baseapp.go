@@ -340,6 +340,8 @@ func (app *BaseApp) InitChain(req abci.RequestInitChain) (res abci.ResponseInitC
 
 	res = app.initChainer(app.deliverState.ctx, req)
 
+	// Commit genesis changes
+	commitUncheckedFiles(app.deliverState.ctx)
 	// NOTE: We don't commit, but BeginBlock for block 1 starts from this
 	// deliverState.
 	return
@@ -543,6 +545,8 @@ func (app *BaseApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeg
 
 	if app.beginBlocker != nil {
 		res = app.beginBlocker(app.deliverState.ctx, req)
+		// Commit changes introduced in beginBlocker
+		commitUncheckedFiles(app.deliverState.ctx)
 	}
 
 	// set the signed validators for addition to context in deliverTx
@@ -587,7 +591,7 @@ func (app *BaseApp) DeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) {
 		result = app.runTx(runTxModeDeliver, txBytes, tx)
 	}
 
-	return abci.ResponseDeliverTx{
+	response := abci.ResponseDeliverTx{
 		Code:      uint32(result.Code),
 		Codespace: string(result.Codespace),
 		Data:      result.Data,
@@ -596,6 +600,10 @@ func (app *BaseApp) DeliverTx(txBytes []byte) (res abci.ResponseDeliverTx) {
 		GasUsed:   int64(result.GasUsed),   // TODO: Should type accept unsigned ints?
 		Tags:      result.Tags,
 	}
+
+	recordTxData(app, txBytes, tx, response)
+
+	return response
 }
 
 // validateBasicTxMsgs executes basic validator calls for messages.
@@ -746,6 +754,10 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 
 	defer func() {
 		if r := recover(); r != nil {
+			if mode == runTxModeDeliver {
+				deleteUncheckedFiles(ctx)
+			}
+
 			switch rType := r.(type) {
 			case sdk.ErrorOutOfGas:
 				log := fmt.Sprintf(
@@ -783,6 +795,9 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 
 	var msgs = tx.GetMsgs()
 	if err := validateBasicTxMsgs(msgs); err != nil {
+		if mode == runTxModeDeliver {
+			deleteUncheckedFiles(ctx)
+		}
 		return err.Result()
 	}
 
@@ -814,10 +829,14 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 		gasWanted = result.GasWanted
 
 		if abort {
+			if mode == runTxModeDeliver {
+				deleteUncheckedFiles(ctx)
+			}
 			return result
 		}
 
 		msCache.Write()
+		commitUncheckedFiles(ctx)
 	}
 
 	if mode == runTxModeCheck {
@@ -837,6 +856,11 @@ func (app *BaseApp) runTx(mode runTxMode, txBytes []byte, tx sdk.Tx) (result sdk
 	// only update state if all messages pass
 	if result.IsOK() {
 		msCache.Write()
+		commitUncheckedFiles(ctx)
+	} else {
+		if mode == runTxModeDeliver {
+			deleteUncheckedFiles(ctx)
+		}
 	}
 
 	return
@@ -850,6 +874,7 @@ func (app *BaseApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBloc
 
 	if app.endBlocker != nil {
 		res = app.endBlocker(app.deliverState.ctx, req)
+		commitUncheckedFiles(app.deliverState.ctx)
 	}
 
 	return
@@ -892,4 +917,8 @@ func (st *state) CacheMultiStore() sdk.CacheMultiStore {
 
 func (st *state) Context() sdk.Context {
 	return st.ctx
+}
+
+func (app *BaseApp) GetTxDecoder() sdk.TxDecoder {
+	return app.txDecoder
 }

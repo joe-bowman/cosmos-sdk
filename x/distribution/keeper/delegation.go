@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"fmt"
+	"os"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -24,6 +25,10 @@ func (k Keeper) initializeDelegation(ctx sdk.Context, val sdk.ValAddress, del sd
 	// note: necessary to truncate so we don't allow withdrawing more rewards than owed
 	stake := validator.ShareTokensTruncated(delegation.GetShares())
 	k.SetDelegatorStartingInfo(ctx, val, del, types.NewDelegatorStartingInfo(previousPeriod, stake, uint64(ctx.BlockHeight())))
+}
+
+func (k Keeper) CalculateDelegationRewards(ctx sdk.Context, val sdk.Validator, del sdk.Delegation, endingPeriod uint64) (rewards sdk.DecCoins) {
+	return k.calculateDelegationRewards(ctx, val, del, endingPeriod)
 }
 
 // calculate the rewards accrued by a delegation between two periods
@@ -102,7 +107,9 @@ func (k Keeper) calculateDelegationRewards(ctx sdk.Context, val sdk.Validator, d
 	return rewards
 }
 
-func (k Keeper) withdrawDelegationRewards(ctx sdk.Context, val sdk.Validator, del sdk.Delegation) sdk.Error {
+func (k Keeper) withdrawDelegationRewards(ctx sdk.Context, val sdk.Validator, del sdk.Delegation, source int) sdk.Error {
+
+	k.ExportAllRewardsForDelegator(ctx, del.GetDelegatorAddr(), source)
 
 	// check existence of delegator starting info
 	if !k.HasDelegatorStartingInfo(ctx, del.GetValidatorAddr(), del.GetDelegatorAddr()) {
@@ -143,10 +150,40 @@ func (k Keeper) withdrawDelegationRewards(ctx sdk.Context, val sdk.Validator, de
 		if _, _, err := k.bankKeeper.AddCoins(ctx, withdrawAddr, coins); err != nil {
 			return err
 		}
+
+		f, _ := os.OpenFile(fmt.Sprintf("./extract/unchecked/rewards.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+		defer f.Close()
+		for _, coin := range coins {
+			f.WriteString(fmt.Sprintf("%s,%s,%s,%d,%d,%s,%s,%d\n", del.GetDelegatorAddr().String(), del.GetValidatorAddr().String(), coin.Denom, 0, uint64(ctx.BlockHeight()), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID(), types.WithdrawSourceZero))
+		}
 	}
 
 	// remove delegator starting info
 	k.DeleteDelegatorStartingInfo(ctx, del.GetValidatorAddr(), del.GetDelegatorAddr())
 
 	return nil
+}
+
+func (k Keeper) ExportAllRewardsForDelegator(ctx sdk.Context, delegatorAddr sdk.AccAddress, source int) {
+
+	cacheCtx, _ := ctx.CacheContext()
+	noGasCtx := cacheCtx.WithGasMeter(sdk.NewInfiniteGasMeter()).WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+
+	f2, _ := os.OpenFile(fmt.Sprintf("./extract/unchecked/rewards.%d.%s", noGasCtx.BlockHeight(), noGasCtx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	defer f2.Close()
+
+	k.stakingKeeper.IterateDelegations(noGasCtx, delegatorAddr, func(index int64, del sdk.Delegation) bool {
+		val := k.stakingKeeper.Validator(noGasCtx, del.GetValidatorAddr())
+
+		// end current period and calculate rewards
+		endingPeriod := k.incrementValidatorPeriod(noGasCtx, val)
+		rewards := k.calculateDelegationRewards(noGasCtx, val, del, endingPeriod)
+
+		// truncate coins, return remainder to community pool
+		coins, _ := rewards.TruncateDecimal()
+		for _, coin := range coins {
+			f2.WriteString(fmt.Sprintf("%s,%s,%s,%d,%d,%s,%s,%d\n", del.GetDelegatorAddr().String(), del.GetValidatorAddr().String(), coin.Denom, uint64(coin.Amount.Int64()), uint64(noGasCtx.BlockHeight()), noGasCtx.BlockHeader().Time.Format("2006-01-02 15:04:05"), noGasCtx.ChainID(), source))
+		}
+		return false
+	})
 }

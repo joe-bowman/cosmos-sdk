@@ -19,3 +19,7 @@ func RegisterCodec(cdc *codec.Codec) {
 func init() {
 	RegisterCodec(msgCdc)
 }
+
+func SetMsgCodec(cdc *codec.Codec) {
+	msgCdc = cdc
+}
