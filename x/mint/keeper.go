@@ -51,6 +51,8 @@ const (
 
 	// StoreKey is the default store key for mint
 	StoreKey = "mint"
+
+	QuerierRoute = StoreKey
 )
 
 //______________________________________________________________________
