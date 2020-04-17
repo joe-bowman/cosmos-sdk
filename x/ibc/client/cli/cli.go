@@ -12,6 +12,7 @@ import (
 	tmclient "github.com/cosmos/cosmos-sdk/x/ibc/07-tendermint/client/cli"
 	localhost "github.com/cosmos/cosmos-sdk/x/ibc/09-localhost"
 	host "github.com/cosmos/cosmos-sdk/x/ibc/24-host"
+	wasmclient "github.com/cosmos/cosmos-sdk/x/ibc/99-wasm/client/cli"
 )
 
 // GetTxCmd returns the transaction commands for this module
@@ -29,6 +30,7 @@ func GetTxCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 		localhost.GetTxCmd(cdc, storeKey),
 		connection.GetTxCmd(cdc, storeKey),
 		channel.GetTxCmd(cdc, storeKey),
+		wasmclient.GetTxCmd(cdc, storeKey),
 	)...)
 	return ibcTxCmd
 }
@@ -48,6 +50,7 @@ func GetQueryCmd(queryRoute string, cdc *codec.Codec) *cobra.Command {
 		ibcclient.GetQueryCmd(cdc, queryRoute),
 		connection.GetQueryCmd(cdc, queryRoute),
 		channel.GetQueryCmd(cdc, queryRoute),
+		wasmclient.GetQueryCmd(cdc, queryRoute),
 	)...)
 	return ibcQueryCmd
 }

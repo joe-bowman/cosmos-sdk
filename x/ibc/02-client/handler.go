@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/ibc/02-client/types"
 	ibctmtypes "github.com/cosmos/cosmos-sdk/x/ibc/07-tendermint/types"
 	localhosttypes "github.com/cosmos/cosmos-sdk/x/ibc/09-localhost/types"
+	ibcwasmtypes "github.com/cosmos/cosmos-sdk/x/ibc/99-wasm/types"
 )
 
 // HandleMsgCreateClient defines the sdk.Handler for MsgCreateClient
@@ -32,6 +33,16 @@ func HandleMsgCreateClient(ctx sdk.Context, k Keeper, msg exported.MsgCreateClie
 	case exported.Localhost:
 		// msg client id is always "localhost"
 		clientState = localhosttypes.NewClientState(ctx.ChainID(), ctx.BlockHeight())
+	case exported.Wasm:
+		wasmMsg, ok := msg.(ibcwasmtypes.MsgCreateWasmClient)
+		if !ok {
+			return nil, sdkerrors.Wrap(ErrInvalidClientType, "Msg is not a Wasm CreateClient msg")
+		}
+		var err error
+		clientState, err = k.WasmKeeper.InitializeFromMsg(ctx, wasmMsg)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, sdkerrors.Wrap(ErrInvalidClientType, msg.GetClientType())
 	}

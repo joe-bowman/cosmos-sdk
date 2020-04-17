@@ -8,6 +8,8 @@ import (
 	client "github.com/cosmos/cosmos-sdk/x/ibc/02-client"
 	connection "github.com/cosmos/cosmos-sdk/x/ibc/03-connection"
 	channel "github.com/cosmos/cosmos-sdk/x/ibc/04-channel"
+	wasmKeeper "github.com/cosmos/cosmos-sdk/x/ibc/99-wasm/keeper"
+	wasm "github.com/cosmos/cosmos-sdk/x/ibc/99-wasm/types"
 )
 
 // NewQuerier creates a querier for the IBC module
@@ -46,6 +48,9 @@ func NewQuerier(k Keeper) sdk.Querier {
 			default:
 				err = sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unknown IBC %s query endpoint", channel.SubModuleName)
 			}
+		case wasm.SubModuleName:
+			querier := wasmKeeper.NewQuerier(k.WasmKeeper)
+			res, err = querier(ctx, path[1:], req)
 		default:
 			err = sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unknown IBC query endpoint")
 		}

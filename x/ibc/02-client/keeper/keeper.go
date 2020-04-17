@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	wasmKeeper "github.com/cosmos/cosmos-sdk/x/ibc/99-wasm/keeper"
+
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
 
@@ -24,14 +26,16 @@ type Keeper struct {
 	storeKey      sdk.StoreKey
 	cdc           *codec.Codec
 	stakingKeeper types.StakingKeeper
+	WasmKeeper    wasmKeeper.Keeper
 }
 
 // NewKeeper creates a new NewKeeper instance
-func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, sk types.StakingKeeper) Keeper {
+func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, sk types.StakingKeeper, wk wasmKeeper.Keeper) Keeper {
 	return Keeper{
 		storeKey:      key,
 		cdc:           cdc,
 		stakingKeeper: sk,
+		WasmKeeper:    wk,
 	}
 }
 

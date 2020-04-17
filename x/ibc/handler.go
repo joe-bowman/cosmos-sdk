@@ -3,25 +3,35 @@ package ibc
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	client "github.com/cosmos/cosmos-sdk/x/ibc/02-client"
 	clientexported "github.com/cosmos/cosmos-sdk/x/ibc/02-client/exported"
 	connection "github.com/cosmos/cosmos-sdk/x/ibc/03-connection"
 	channel "github.com/cosmos/cosmos-sdk/x/ibc/04-channel"
 	port "github.com/cosmos/cosmos-sdk/x/ibc/05-port"
+	wasm "github.com/cosmos/cosmos-sdk/x/ibc/99-wasm"
+	ibcwasmtypes "github.com/cosmos/cosmos-sdk/x/ibc/99-wasm/types"
 )
 
 // NewHandler defines the IBC handler
 func NewHandler(k Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		ctx = ctx.WithEventManager(sdk.NewEventManager())
-
+		ctx.Logger().Info(msg.Type())
 		switch msg := msg.(type) {
+		case ibcwasmtypes.MsgWrappedData:
+			return wasm.HandleMsgWrappedData(ctx, k.WasmKeeper, msg)
+
+		case ibcwasmtypes.MsgCreateWasmClient:
+			return wasm.HandleMsgCreateClient(ctx, k.WasmKeeper, msg)
+
 		// IBC client msg interface types
-		case clientexported.MsgCreateClient:
-			return client.HandleMsgCreateClient(ctx, k.ClientKeeper, msg)
+		//case clientexported.MsgCreateClient:
+		//	return client.HandleMsgCreateClient(ctx, k.ClientKeeper, msg)
 
 		case clientexported.MsgUpdateClient:
 			return &sdk.Result{}, nil
+
+		case ibcwasmtypes.MsgStoreClientCode:
+			return wasm.HandleMsgStoreCode(ctx, k.WasmKeeper, msg)
 
 		// IBC connection  msgs
 		case *connection.MsgConnectionOpenInit:

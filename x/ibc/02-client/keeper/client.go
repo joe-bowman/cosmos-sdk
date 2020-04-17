@@ -2,6 +2,8 @@ package keeper
 
 import (
 	"fmt"
+	wasm "github.com/cosmos/cosmos-sdk/x/ibc/99-wasm"
+	ibcwasmtypes "github.com/cosmos/cosmos-sdk/x/ibc/99-wasm/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -80,6 +82,10 @@ func (k Keeper) UpdateClient(ctx sdk.Context, clientID string, header exported.H
 			ctx.ChainID(), // use the chain ID from context since the client is from the running chain (i.e self).
 			ctx.BlockHeight(),
 		)
+	case exported.Wasm:
+		clientState, consensusState, err = wasm.CheckValidityAndUpdateState(
+			clientState, header, ctx.BlockTime(),
+		)
 	default:
 		err = types.ErrInvalidClientType
 	}
@@ -138,7 +144,10 @@ func (k Keeper) CheckMisbehaviourAndUpdateState(ctx sdk.Context, misbehaviour ex
 		clientState, err = tendermint.CheckMisbehaviourAndUpdateState(
 			clientState, consensusState, misbehaviour, consensusState.GetHeight(), ctx.BlockTime(),
 		)
-
+	case ibcwasmtypes.Evidence:
+		clientState, err = wasm.CheckMisbehaviourAndUpdateState(
+			clientState, consensusState, misbehaviour, consensusState.GetHeight(), ctx.BlockTime(),
+		)
 	default:
 		err = sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized IBC client evidence type: %T", e)
 	}

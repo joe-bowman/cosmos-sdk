@@ -8,6 +8,7 @@ import (
 	connection "github.com/cosmos/cosmos-sdk/x/ibc/03-connection"
 	channel "github.com/cosmos/cosmos-sdk/x/ibc/04-channel"
 	port "github.com/cosmos/cosmos-sdk/x/ibc/05-port"
+	wasm "github.com/cosmos/cosmos-sdk/x/ibc/99-wasm/keeper"
 )
 
 // Keeper defines each ICS keeper for IBC
@@ -17,13 +18,15 @@ type Keeper struct {
 	ChannelKeeper    channel.Keeper
 	PortKeeper       port.Keeper
 	Router           *port.Router
+	WasmKeeper       wasm.Keeper
 }
 
 // NewKeeper creates a new ibc Keeper
 func NewKeeper(
 	cdc *codec.Codec, appCodec codec.Marshaler, key sdk.StoreKey, stakingKeeper client.StakingKeeper, scopedKeeper capability.ScopedKeeper,
 ) *Keeper {
-	clientKeeper := client.NewKeeper(cdc, key, stakingKeeper)
+	wasmKeeper := wasm.NewKeeper(cdc, key)
+	clientKeeper := client.NewKeeper(cdc, key, stakingKeeper, wasmKeeper)
 	connectionKeeper := connection.NewKeeper(cdc, appCodec, key, clientKeeper)
 	portKeeper := port.NewKeeper(scopedKeeper)
 	channelKeeper := channel.NewKeeper(appCodec, key, clientKeeper, connectionKeeper, portKeeper, scopedKeeper)
@@ -33,6 +36,7 @@ func NewKeeper(
 		ConnectionKeeper: connectionKeeper,
 		ChannelKeeper:    channelKeeper,
 		PortKeeper:       portKeeper,
+		WasmKeeper:       wasmKeeper,
 	}
 }
 

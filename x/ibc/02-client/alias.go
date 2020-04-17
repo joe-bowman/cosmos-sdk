@@ -8,6 +8,7 @@ package client
 import (
 	"github.com/cosmos/cosmos-sdk/x/ibc/02-client/keeper"
 	"github.com/cosmos/cosmos-sdk/x/ibc/02-client/types"
+	wasmKeeper "github.com/cosmos/cosmos-sdk/x/ibc/99-wasm/keeper"
 )
 
 const (
@@ -68,4 +69,5 @@ type (
 	StateResponse          = types.StateResponse
 	ConsensusStateResponse = types.ConsensusStateResponse
 	Keeper                 = keeper.Keeper
+	WasmKeeper             = wasmKeeper.Keeper
 )

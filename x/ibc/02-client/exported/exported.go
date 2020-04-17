@@ -153,6 +153,7 @@ type ClientType byte
 // available client types
 const (
 	Tendermint ClientType = iota + 1 // 1
+	Wasm       ClientType = iota + 2 // 2
 	Localhost
 )
 
@@ -160,6 +161,7 @@ const (
 const (
 	ClientTypeTendermint string = "tendermint"
 	ClientTypeLocalHost  string = "localhost"
+	ClientTypeWasm       string = "wasm"
 )
 
 func (ct ClientType) String() string {
@@ -168,6 +170,8 @@ func (ct ClientType) String() string {
 		return ClientTypeTendermint
 	case Localhost:
 		return ClientTypeLocalHost
+	case Wasm:
+		return ClientTypeWasm
 	default:
 		return ""
 	}
@@ -203,6 +207,8 @@ func ClientTypeFromString(clientType string) ClientType {
 		return Tendermint
 	case ClientTypeLocalHost:
 		return Localhost
+	case ClientTypeWasm:
+		return Wasm
 	default:
 		return 0
 	}
