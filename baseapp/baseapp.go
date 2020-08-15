@@ -93,7 +93,7 @@ type BaseApp struct {
 	haltTime uint64
 
 	// application's version string
-	appVersion  string
+	appVersion string
 
 	// Enable/Disable extract data
 	extractData bool
@@ -321,6 +321,44 @@ func (app *BaseApp) setDeliverState(header abci.Header) {
 	if app.GetExtractDataMode() {
 		ctx = ctx.WithValue("ExtractDataMode", true)
 	}
+
+	// Find all denominations at block height and pass them to context
+	denominationsAtBlockHeight := []string{}
+
+	if ctx.BlockHeight() == 0 {
+
+		// We have to hardcode denominations for the genesis block
+		// as they are not ready when required in the genesis block height case.
+		// Error if we try to retrieve with the code block in else {...}
+		// - panic : stored supply should not have been nil (for genesis block)
+		// TODO : Hardcoded denomination set may vary across hubs (1,2,3) and chains(cosmos, terra)
+
+		denominationsAtBlockHeight = append(denominationsAtBlockHeight, "uatom")
+	} else {
+
+		//QueryWithData ensures infinite gas meter
+		appQuerier := AppQuerier{app, ctx}
+		queryPath := "custom/supply/total_supply"
+
+		//Limiting this lookup to 10K denominations
+		//If Terra is tracking 10K+ denominations, we are looking at bigger scaling issues for Hipparchus!
+		//At that point, this should be a minor bug to fix.
+		queryTotalSupplyParams := QueryTotalSupplyParams{1, 10000}
+		//TODO : Handle Error
+		bz, _ := codec.Cdc.MarshalJSON(queryTotalSupplyParams)
+		//TODO Handle error
+		resBytes, _, _ := appQuerier.QueryWithData(queryPath, bz)
+
+		var allCoins sdk.Coins
+		codec.Cdc.UnmarshalJSON(resBytes, &allCoins)
+
+		for _, coin := range allCoins {
+			denominationsAtBlockHeight = append(denominationsAtBlockHeight, coin.Denom)
+		}
+
+	}
+
+	ctx = ctx.WithValue("Denominations", denominationsAtBlockHeight)
 	app.deliverState = &state{
 		ms:  ms,
 		ctx: ctx,
