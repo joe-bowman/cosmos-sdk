@@ -7,6 +7,21 @@ import (
 	"os"
 )
 
+//Denominations represents the list of all denominations at a block height
+type Denominations = []string
+
+var genesisDenominations = map[string]Denominations{
+	//TODO : Find genesis denominations for all chains and update this list
+
+	"columbus-1": []string{"uatom"},
+	"columbus-2": []string{"uatom"},
+	"columbus-3": []string{"uatom"},
+
+	"cosmoshub-1": []string{"uatom"},
+	"cosmoshub-2": []string{"uatom"},
+	"cosmoshub-3": []string{"uatom"},
+}
+
 func copyFile(destination string, source string) error {
 	sourceFile, err := os.OpenFile(source, os.O_RDONLY, 0644)
 	if err != nil {

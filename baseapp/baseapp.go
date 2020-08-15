@@ -323,17 +323,12 @@ func (app *BaseApp) setDeliverState(header abci.Header) {
 	}
 
 	// Find all denominations at block height and pass them to context
-	denominationsAtBlockHeight := []string{}
 
 	if ctx.BlockHeight() == 0 {
-
 		// We have to hardcode denominations for the genesis block
-		// as they are not ready when required in the genesis block height case.
-		// Error if we try to retrieve with the code block in else {...}
-		// - panic : stored supply should not have been nil (for genesis block)
-		// TODO : Hardcoded denomination set may vary across hubs (1,2,3) and chains(cosmos, terra)
+		// as for the genesis block height case, they are not ready when required
+		ctx = ctx.WithValue("Denominations", genesisDenominations[ctx.ChainID()])
 
-		denominationsAtBlockHeight = append(denominationsAtBlockHeight, "uatom")
 	} else {
 
 		//QueryWithData ensures infinite gas meter
@@ -352,13 +347,16 @@ func (app *BaseApp) setDeliverState(header abci.Header) {
 		var allCoins sdk.Coins
 		codec.Cdc.UnmarshalJSON(resBytes, &allCoins)
 
+		denominationsAtBlockHeight := Denominations{}
+
 		for _, coin := range allCoins {
 			denominationsAtBlockHeight = append(denominationsAtBlockHeight, coin.Denom)
 		}
 
+		ctx = ctx.WithValue("Denominations", denominationsAtBlockHeight)
+
 	}
 
-	ctx = ctx.WithValue("Denominations", denominationsAtBlockHeight)
 	app.deliverState = &state{
 		ms:  ms,
 		ctx: ctx,
