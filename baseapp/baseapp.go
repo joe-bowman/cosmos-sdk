@@ -779,7 +779,9 @@ func (app *BaseApp) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliv
 	ctx := app.getContextForTx(runTxModeDeliver, req.Tx)
 
 	sdktx, _ := tx.(auth.StdTx)
+
 	jsonTags, _ := codec.Cdc.MarshalJSON(sdk.EventsToString(result.Events.ToABCIEvents()))
+	jsonEvents, _ := codec.Cdc.MarshalJSON(sdk.StringifyEvents(result.Events.ToABCIEvents()))
 	jsonMsgs := MsgsToString(sdktx.GetMsgs())
 	jsonFee, _ := codec.Cdc.MarshalJSON(sdktx.Fee)
 	jsonMemo, _ := codec.Cdc.MarshalJSON(sdktx.GetMemo())
@@ -799,7 +801,7 @@ func (app *BaseApp) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliv
 	}
 
 	f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/txs.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-	f.WriteString(fmt.Sprintf("%s,%d,%d,%d,%d,$%s$,$%s$,$%s$,$%s$,$%s$,%s,%s\n",
+	f.WriteString(fmt.Sprintf("%s,%d,%d,%d,%d,$%s$,$%s$,$%s$,$%s$,$%s$,$%s$,%s,%s\n",
 		txHash,
 		ctx.BlockHeight(),
 		uint32(result.Code),
@@ -810,6 +812,7 @@ func (app *BaseApp) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliv
 		strings.ReplaceAll(string(jsonFee), "$", "\\$"),
 		strings.ReplaceAll(string(jsonTags), "$", "\\$"),
 		strings.ReplaceAll(string(jsonMsgs), "$", "\\$"),
+		strings.ReplaceAll(string(jsonEvents), "$", "\\$"),
 		ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"),
 		ctx.ChainID()))
 	f.Close()
