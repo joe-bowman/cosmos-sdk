@@ -11,11 +11,12 @@ import (
 type Denominations = []string
 
 var genesisDenominations = map[string]Denominations{
-	//TODO : Find genesis denominations for all chains and update this list
+	//TODO : Parse genesis denominations from genesis.json 
+	// https://github.com/ChorusOne/hipparchus/issues/78
 
-	"columbus-1": []string{"uatom"},
-	"columbus-2": []string{"uatom"},
-	"columbus-3": []string{"uatom"},
+	"columbus-1": []string{"ukrw", "uluna", "umnt", "usdr", "uusd"},
+	"columbus-2": []string{"ukrw", "uluna", "umnt", "usdr", "uusd"},
+	"columbus-3": []string{"ukrw", "uluna", "umnt", "usdr", "uusd"},
 
 	"cosmoshub-1": []string{"uatom"},
 	"cosmoshub-2": []string{"uatom"},
