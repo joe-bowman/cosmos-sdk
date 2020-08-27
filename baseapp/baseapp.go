@@ -339,11 +339,14 @@ func (app *BaseApp) setDeliverState(header abci.Header) {
 		//If Terra is tracking 10K+ denominations, we are looking at bigger scaling issues for Hipparchus!
 		//At that point, this should be a minor bug to fix.
 		queryTotalSupplyParams := QueryTotalSupplyParams{1, 10000}
-		//TODO : Handle Error
-		bz, _ := codec.Cdc.MarshalJSON(queryTotalSupplyParams)
-		//TODO Handle error
-		resBytes, _, _ := appQuerier.QueryWithData(queryPath, bz)
-
+		bz, err := codec.Cdc.MarshalJSON(queryTotalSupplyParams)
+		if err != nil {
+			panic(err)
+		}
+		resBytes, _, err2 := appQuerier.QueryWithData(queryPath, bz)
+		if err2 != nil {
+			panic(err2)
+		}
 		var allCoins sdk.Coins
 		codec.Cdc.UnmarshalJSON(resBytes, &allCoins)
 

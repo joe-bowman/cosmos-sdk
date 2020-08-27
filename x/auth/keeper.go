@@ -114,7 +114,17 @@ func (ak AccountKeeper) SetAccount(ctx sdk.Context, acc exported.Account) {
 			var coins []sdk.Coin
 			coins = acc.GetCoins()
 			if coins == nil {
-				for _, denomination := range ctx.Value("Denominations").([]string) {
+
+				if ctx.Value("Denominations") == nil {
+					panic("Unable to record balances for an empty wallet, as list of denomination is missing")
+				}
+
+				denominations, ok := ctx.Value("Denominations").([]string)
+
+				if !ok {
+					panic("Unable to record balances for an empty wallet, as list of denominations passed is not of type []string")
+				}
+				for _, denomination := range denominations {
 					f.WriteString(fmt.Sprintf("%s,%s,%s,%d,%s,%s,%d, %d\n", acc.GetAddress(), denomination, "0", ctx.BlockHeight(), ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"), ctx.ChainID(), acc.GetAccountNumber(), acc.GetSequence()))
 
 				}
