@@ -93,7 +93,7 @@ type BaseApp struct {
 	haltTime uint64
 
 	// application's version string
-	appVersion  string
+	appVersion string
 
 	// Enable/Disable extract data
 	extractData bool
@@ -321,6 +321,45 @@ func (app *BaseApp) setDeliverState(header abci.Header) {
 	if app.GetExtractDataMode() {
 		ctx = ctx.WithValue("ExtractDataMode", true)
 	}
+
+	// Find all denominations at block height and pass them to context
+
+	if ctx.BlockHeight() == 0 {
+		// We have to hardcode denominations for the genesis block
+		// as for the genesis block height case, they are not ready when required
+		ctx = ctx.WithValue("Denominations", genesisDenominations[ctx.ChainID()])
+
+	} else {
+
+		//QueryWithData ensures infinite gas meter
+		appQuerier := AppQuerier{app, ctx}
+		queryPath := "custom/supply/total_supply"
+
+		//Limiting this lookup to 10K denominations
+		//If Terra is tracking 10K+ denominations, we are looking at bigger scaling issues for Hipparchus!
+		//At that point, this should be a minor bug to fix.
+		queryTotalSupplyParams := QueryTotalSupplyParams{1, 10000}
+		bz, err := codec.Cdc.MarshalJSON(queryTotalSupplyParams)
+		if err != nil {
+			panic(err)
+		}
+		resBytes, _, err2 := appQuerier.QueryWithData(queryPath, bz)
+		if err2 != nil {
+			panic(err2)
+		}
+		var allCoins sdk.Coins
+		codec.Cdc.UnmarshalJSON(resBytes, &allCoins)
+
+		denominationsAtBlockHeight := Denominations{}
+
+		for _, coin := range allCoins {
+			denominationsAtBlockHeight = append(denominationsAtBlockHeight, coin.Denom)
+		}
+
+		ctx = ctx.WithValue("Denominations", denominationsAtBlockHeight)
+
+	}
+
 	app.deliverState = &state{
 		ms:  ms,
 		ctx: ctx,
@@ -743,7 +782,9 @@ func (app *BaseApp) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliv
 	ctx := app.getContextForTx(runTxModeDeliver, req.Tx)
 
 	sdktx, _ := tx.(auth.StdTx)
+
 	jsonTags, _ := codec.Cdc.MarshalJSON(sdk.EventsToString(result.Events.ToABCIEvents()))
+	jsonEvents, _ := codec.Cdc.MarshalJSON(sdk.StringifyEvents(result.Events.ToABCIEvents()))
 	jsonMsgs := MsgsToString(sdktx.GetMsgs())
 	jsonFee, _ := codec.Cdc.MarshalJSON(sdktx.Fee)
 	jsonMemo, _ := codec.Cdc.MarshalJSON(sdktx.GetMemo())
@@ -763,7 +804,7 @@ func (app *BaseApp) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliv
 	}
 
 	f, _ := os.OpenFile(fmt.Sprintf("./extract/progress/txs.%d.%s", ctx.BlockHeight(), ctx.ChainID()), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-	f.WriteString(fmt.Sprintf("%s,%d,%d,%d,%d,$%s$,$%s$,$%s$,$%s$,$%s$,%s,%s\n",
+	f.WriteString(fmt.Sprintf("%s,%d,%d,%d,%d,$%s$,$%s$,$%s$,$%s$,$%s$,$%s$,%s,%s\n",
 		txHash,
 		ctx.BlockHeight(),
 		uint32(result.Code),
@@ -774,6 +815,7 @@ func (app *BaseApp) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliv
 		strings.ReplaceAll(string(jsonFee), "$", "\\$"),
 		strings.ReplaceAll(string(jsonTags), "$", "\\$"),
 		strings.ReplaceAll(string(jsonMsgs), "$", "\\$"),
+		strings.ReplaceAll(string(jsonEvents), "$", "\\$"),
 		ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"),
 		ctx.ChainID()))
 	f.Close()
