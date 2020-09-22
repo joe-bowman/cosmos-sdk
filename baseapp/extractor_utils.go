@@ -15,6 +15,21 @@ import (
 	"github.com/tendermint/tendermint/crypto/tmhash"
 )
 
+//Denominations represents the list of all denominations at a block height
+type Denominations = []string
+
+var staticSetOfDenominations = map[string]Denominations{
+
+	// Columbus-1 and Columbus-2 had a fixed set of denominations
+	// umnt was added at Nov. 30th. 2019 (end of Columbus-2).
+
+	"columbus-1": []string{"ukrw", "uluna", "usdr", "uusd"},
+	"columbus-2": []string{"ukrw", "uluna", "usdr", "uusd"},
+
+	"cosmoshub-1": []string{"uatom"},
+	"cosmoshub-2": []string{"uatom"},
+}
+
 func recordTxData(app *BaseApp, txBytes []byte, tx sdk.Tx, result abci.ResponseDeliverTx) {
 	ctx := app.getContextForTx(runTxModeDeliver, txBytes)
 	txHash := fmt.Sprintf("%X", tmhash.Sum(txBytes))

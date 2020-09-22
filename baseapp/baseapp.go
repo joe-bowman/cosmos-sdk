@@ -275,6 +275,14 @@ func (app *BaseApp) setDeliverState(header abci.Header) {
 	if app.GetExtractDataMode() {
 		ctx = ctx.WithValue("ExtractDataMode", true)
 	}
+
+	// Note : For chains Cosmoshub-1, Cosmoshub-2, Columbus-1, Columbus-2
+	// the set of denominations remains fixed for the duration of the chain
+	// Since, this version of `ChorusOne/cosmos-sdk` is used by Hipparchus 0.34 : we are hardcoding the denominations
+	// For dynamic denominations code : refer to the `ChorusOne/cosmos-sdk` versions required by Hipparchus 0.37 and upwards
+
+	ctx = ctx.WithValue("Denominations", staticSetOfDenominations[ctx.ChainID()])
+
 	app.deliverState = &state{
 		ms:  ms,
 		ctx: ctx,
