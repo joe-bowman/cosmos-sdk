@@ -36,6 +36,11 @@ func recordTxData(app *BaseApp, txBytes []byte, tx sdk.Tx, result abci.ResponseD
 
 	sdktx, _ := tx.(auth.StdTx)
 	jsonTags, _ := codec.Cdc.MarshalJSON(sdk.TagsToStringTags(result.Tags))
+	//Adding empty jsonEvents object for forward compatibility with submitters code
+	//Anthem can check : if jsonEvents is null => use jsonTags
+
+	jsonEvents, _ := codec.Cdc.MarshalJSON(nil)
+
 	jsonMsgs := MsgsToString(sdktx.GetMsgs())
 	jsonFee, _ := codec.Cdc.MarshalJSON(sdktx.Fee)
 	jsonMemo, _ := codec.Cdc.MarshalJSON(sdktx.GetMemo())
@@ -50,7 +55,7 @@ func recordTxData(app *BaseApp, txBytes []byte, tx sdk.Tx, result abci.ResponseD
 	}
 	defer f.Close()
 
-	f.WriteString(fmt.Sprintf("%s,%d,%d,%d,%d,$%s$,$%s$,$%s$,$%s$,$%s$,%s,%s\n",
+	f.WriteString(fmt.Sprintf("%s,%d,%d,%d,%d,$%s$,$%s$,$%s$,$%s$,$%s$,$%s$,%s,%s\n",
 		txHash,
 		ctx.BlockHeight(),
 		uint32(result.Code),
@@ -61,6 +66,7 @@ func recordTxData(app *BaseApp, txBytes []byte, tx sdk.Tx, result abci.ResponseD
 		strings.ReplaceAll(string(jsonFee), "$", "\\$"),
 		strings.ReplaceAll(string(jsonTags), "$", "\\$"),
 		strings.ReplaceAll(string(jsonMsgs), "$", "\\$"),
+		strings.ReplaceAll(string(jsonEvents), "$", "\\$"),
 		ctx.BlockHeader().Time.Format("2006-01-02 15:04:05"),
 		ctx.ChainID()))
 }
