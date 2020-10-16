@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"strings"
 
 	"github.com/tendermint/tendermint/crypto"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec/legacy"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
-	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 )
 
@@ -635,8 +635,9 @@ func Bech32ifyPubKey(pkt Bech32PubKeyType, pubkey crypto.PubKey) (string, error)
 	// ed25519 the same way as TM's ed25519.
 	// TODO: Remove Bech32ifyPubKey and all usages (cosmos/cosmos-sdk/issues/#7357)
 	pkToMarshal := pubkey
-	if ed25519Pk, ok := pubkey.(*ed25519.PubKey); ok {
-		pkToMarshal = ed25519Pk.AsTmPubKey()
+
+	if intoTmPk, ok := pkToMarshal.(cryptotypes.IntoTmPubKey); ok {
+		pkToMarshal = intoTmPk.AsTmPubKey()
 	}
 
 	return bech32.ConvertAndEncode(bech32Prefix, legacy.Cdc.MustMarshalBinaryBare(pkToMarshal))

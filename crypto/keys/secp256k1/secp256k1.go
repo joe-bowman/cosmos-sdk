@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"fmt"
+	tmsecp256k1 "github.com/tendermint/tendermint/crypto/secp256k1"
 	"io"
 	"math/big"
 
@@ -24,8 +25,8 @@ var _ codec.AminoMarshaler = &PrivKey{}
 const (
 	PrivKeySize = 32
 	keyType     = "secp256k1"
-	PrivKeyName = "tendermint/PrivKeySecp256k1"
-	PubKeyName  = "tendermint/PubKeySecp256k1"
+	PrivKeyName = "cosmos/PrivKeySecp256k1"
+	PubKeyName  = "cosmos/PubKeySecp256k1"
 )
 
 // Bytes returns the byte representation of the Private Key.
@@ -50,6 +51,7 @@ func (privKey *PrivKey) Equals(other crypto.PrivKey) bool {
 func (privKey *PrivKey) Type() string {
 	return keyType
 }
+
 
 // MarshalAmino overrides Amino binary marshalling.
 func (privKey PrivKey) MarshalAmino() ([]byte, error) {
@@ -158,6 +160,7 @@ func (pubKey *PubKey) Address() crypto.Address {
 
 	hasherRIPEMD160 := ripemd160.New()
 	hasherRIPEMD160.Write(sha) // does not error
+
 	return crypto.Address(hasherRIPEMD160.Sum(nil))
 }
 
@@ -203,4 +206,19 @@ func (pubKey PubKey) MarshalAminoJSON() ([]byte, error) {
 // UnmarshalAminoJSON overrides Amino JSON marshalling.
 func (pubKey *PubKey) UnmarshalAminoJSON(bz []byte) error {
 	return pubKey.UnmarshalAmino(bz)
+}
+
+// FromTmSecp256k1 creates a Secp256k1 public key from a corresponding Tendermint pubkey.
+func FromTmSecp256k1(pubKey crypto.PubKey) (*PubKey, error) {
+	tmPk, ok := pubKey.(tmsecp256k1.PubKey)
+	if !ok {
+		return nil, fmt.Errorf("expected %T, got %T", tmsecp256k1.PubKey{}, pubKey)
+	}
+
+	return &PubKey{Key: []byte(tmPk)}, nil
+}
+
+// AsTmPubKey converts our own PubKey into a Tendermint Secp256k1 pubkey.
+func (pubKey *PubKey) AsTmPubKey() crypto.PubKey {
+	return tmsecp256k1.PubKey(pubKey.Key)
 }

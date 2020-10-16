@@ -3,6 +3,7 @@ package codec
 import (
 	"github.com/tendermint/tendermint/crypto"
 	tmed25519 "github.com/tendermint/tendermint/crypto/ed25519"
+	tmsecp256k1 "github.com/tendermint/tendermint/crypto/secp256k1"
 	"github.com/tendermint/tendermint/crypto/sr25519"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -32,6 +33,8 @@ func RegisterCrypto(cdc *codec.LegacyAmino) {
 	// TODO Same as above, for ED25519
 	cdc.RegisterConcrete(tmed25519.PubKey{},
 		tmed25519.PubKeyName, nil)
+	cdc.RegisterConcrete(tmsecp256k1.PubKey{},
+		tmsecp256k1.PubKeyName, nil)
 	cdc.RegisterConcrete(&ed25519.PubKey{},
 		ed25519.PubKeyName, nil)
 	cdc.RegisterConcrete(&secp256k1.PubKey{},
@@ -45,6 +48,8 @@ func RegisterCrypto(cdc *codec.LegacyAmino) {
 	// TODO Same as above
 	cdc.RegisterConcrete(tmed25519.PrivKey{},
 		tmed25519.PrivKeyName, nil)
+	cdc.RegisterConcrete(tmsecp256k1.PrivKey{},
+		tmsecp256k1.PrivKeyName, nil)
 	cdc.RegisterConcrete(&ed25519.PrivKey{},
 		ed25519.PrivKeyName, nil)
 	cdc.RegisterConcrete(&secp256k1.PrivKey{},
