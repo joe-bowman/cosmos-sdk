@@ -22,6 +22,10 @@ func NewPV() PV {
 	return PV{ed25519.GenPrivKey()}
 }
 
+func (pv PV) String() string {
+  return "mock pv"
+}
+
 // GetPubKey implements PrivValidator interface
 func (pv PV) GetPubKey() (crypto.PubKey, error) {
 	return cryptocodec.ToTmPubKeyInterface(pv.PrivKey.PubKey())
